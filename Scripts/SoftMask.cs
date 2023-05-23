@@ -425,7 +425,7 @@ namespace Coffee.UISoftMask
         /// <summary>
         /// This function is called when the parent property of the transform of the GameObject has changed.
         /// </summary>
-        protected override void OnTransformParentChanged()
+        protected virtual void OnTransformParentChanged()
         {
             hasChanged = true;
             SoftMask newParent = null;
@@ -443,7 +443,7 @@ namespace Coffee.UISoftMask
             hasChanged = true;
         }
 
-        protected override void OnRectTransformDimensionsChange()
+        protected virtual void OnRectTransformDimensionsChange()
         {
             hasChanged = true;
         }
