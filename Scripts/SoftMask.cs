@@ -287,8 +287,40 @@ namespace Coffee.UISoftMask
         /// </summary>
         void IMeshModifier.ModifyMesh(Mesh mesh)
         {
+            if (isActiveAndEnabled)
+            {
+                if (ignoreSelfGraphic)
+                {
+                    mesh.Clear();
+                    FillMesh(mesh, this.mesh);
+                }
+                else if (ignoreSelfStencil)
+                {
+                    FillMesh(mesh, this.mesh);
+                    mesh.Clear();
+                }
+                else
+                {
+                    FillMesh(mesh, this.mesh);
+                }
+            }
+
             hasChanged = true;
-            _mesh = mesh;
+
+            static void FillMesh(Mesh src, Mesh dst)
+            {
+                dst.Clear();
+                dst.SetVertices(src.vertices);
+                dst.SetColors(src.colors);
+                dst.SetUVs(0, src.uv);
+                dst.SetUVs(1, src.uv2);
+                dst.SetUVs(2, src.uv2);
+                dst.SetUVs(3, src.uv3);
+                dst.SetNormals(src.normals);
+                dst.SetTangents(src.tangents);
+                dst.SetTriangles(src.triangles, 0);
+                dst.RecalculateBounds();
+            }
         }
 
         /// <summary>
