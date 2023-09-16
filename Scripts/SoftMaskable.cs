@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
@@ -12,11 +11,7 @@ namespace Coffee.UISoftMask
     /// Soft maskable.
     /// Add this component to Graphic under SoftMask for smooth masking.
     /// </summary>
-#if UNITY_2018_3_OR_NEWER
     [ExecuteAlways]
-#else
-	[ExecuteInEditMode]
-# endif
     [RequireComponent(typeof(Graphic))]
     public class SoftMaskable : MonoBehaviour, IMaterialModifier, ICanvasRaycastFilter
 #if UNITY_EDITOR
@@ -44,9 +39,6 @@ namespace Coffee.UISoftMask
         [SerializeField, Tooltip("Use stencil to mask.")]
         private bool m_UseStencil = true;
 
-        [SerializeField, Tooltip("Use soft-masked raycast target.\n\nNote: This option is expensive.")]
-        private bool m_RaycastFilter;
-
         private Graphic _graphic;
         private SoftMask _softMask;
         private Hash128 _effectMaterialHash;
@@ -64,15 +56,6 @@ namespace Coffee.UISoftMask
                 m_MaskInteraction = intValue;
                 graphic.SetMaterialDirtyEx();
             }
-        }
-
-        /// <summary>
-        /// Use soft-masked raycast target. This option is expensive.
-        /// </summary>
-        public bool raycastFilter
-        {
-            get { return m_RaycastFilter; }
-            set { m_RaycastFilter = value; }
         }
 
         /// <summary>
@@ -173,44 +156,30 @@ namespace Coffee.UISoftMask
             if (!RectTransformUtility.RectangleContainsScreenPoint(transform as RectTransform, sp, eventCamera))
                 return false;
 
-            if (m_RaycastFilter)
+            var sm = _softMask;
+            for (var i = 0; i < 4; i++)
             {
-                var sm = _softMask;
-                for (var i = 0; i < 4; i++)
+                if (!sm) break;
+
+                s_Interactions[i] = sm ? ((m_MaskInteraction >> i * 2) & 0x3) : 0;
+                var interaction = s_Interactions[i] == 1;
+                var rt = sm.transform as RectTransform;
+                var inRect = RectTransformUtility.RectangleContainsScreenPoint(rt, sp, eventCamera);
+                if (!sm.ignoreSelfGraphic && interaction != inRect) return false;
+
+                foreach (var child in sm._children)
                 {
-                    s_Interactions[i] = sm ? ((m_MaskInteraction >> i * 2) & 0x3) : 0;
-                    sm = sm ? sm.parent : null;
+                    if (!child) continue;
+
+                    var childRt = child.transform as RectTransform;
+                    var inRectChild = RectTransformUtility.RectangleContainsScreenPoint(childRt, sp, eventCamera);
+                    if (!child.ignoreSelfGraphic && interaction != inRectChild) return false;
                 }
 
-                return _softMask.IsRaycastLocationValid(sp, eventCamera, graphic, s_Interactions);
+                sm = sm ? sm.parent : null;
             }
-            else
-            {
-                var sm = _softMask;
-                for (var i = 0; i < 4; i++)
-                {
-                    if (!sm) break;
 
-                    s_Interactions[i] = sm ? ((m_MaskInteraction >> i * 2) & 0x3) : 0;
-                    var interaction = s_Interactions[i] == 1;
-                    var rt = sm.transform as RectTransform;
-                    var inRect = RectTransformUtility.RectangleContainsScreenPoint(rt, sp, eventCamera);
-                    if (!sm.ignoreSelfGraphic && interaction != inRect) return false;
-
-                    foreach (var child in sm._children)
-                    {
-                        if (!child) continue;
-
-                        var childRt = child.transform as RectTransform;
-                        var inRectChild = RectTransformUtility.RectangleContainsScreenPoint(childRt, sp, eventCamera);
-                        if (!child.ignoreSelfGraphic && interaction != inRectChild) return false;
-                    }
-
-                    sm = sm ? sm.parent : null;
-                }
-
-                return true;
-            }
+            return true;
         }
 
         /// <summary>

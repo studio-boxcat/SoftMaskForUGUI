@@ -349,24 +349,6 @@ namespace Coffee.UISoftMask
             hasChanged = true;
         }
 
-        /// <summary>
-        /// Given a point and a camera is the raycast valid.
-        /// </summary>
-        /// <returns>Valid.</returns>
-        /// <param name="sp">Screen position.</param>
-        /// <param name="eventCamera">Raycast camera.</param>
-        /// <param name="g">Target graphic.</param>
-        public bool IsRaycastLocationValid(Vector2 sp, Camera eventCamera, Graphic g, int[] interactions)
-        {
-            if (!isActiveAndEnabled || (g == graphic && !g.raycastTarget)) return true;
-
-            int x = (int) ((softMaskBuffer.width - 1) * Mathf.Clamp01(sp.x / Screen.width));
-            int y = s_UVStartsAtTop && !s_IsMetal
-                ? (int) ((softMaskBuffer.height - 1) * (1 - Mathf.Clamp01(sp.y / Screen.height)))
-                : (int) ((softMaskBuffer.height - 1) * Mathf.Clamp01(sp.y / Screen.height));
-            return 0.5f < GetPixelValue(x, y, interactions);
-        }
-
         public override bool IsRaycastLocationValid(Vector2 sp, Camera eventCamera)
         {
             return true;
