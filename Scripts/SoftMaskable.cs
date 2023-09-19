@@ -75,15 +75,9 @@ namespace Coffee.UISoftMask
         /// <summary>
         /// The graphic associated with the soft mask.
         /// </summary>
-        public Graphic graphic
-        {
-            get { return _graphic ? _graphic : _graphic = GetComponent<Graphic>(); }
-        }
+        public Graphic graphic => _graphic ??=  GetComponent<Graphic>();
 
-        public SoftMask softMask
-        {
-            get { return _softMask ? _softMask : _softMask = this.GetComponentInParentEx<SoftMask>(); }
-        }
+        public SoftMask softMask => _softMask ??= this.GetComponentInParentEx<SoftMask>();
 
         public Material modifiedMaterial { get; private set; }
 
