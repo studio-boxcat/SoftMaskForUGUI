@@ -43,7 +43,6 @@ namespace Coffee.UISoftMask
         };
 
         private static Shader s_SoftMaskShader;
-        private static Texture2D s_ReadTexture;
         private static readonly List<SoftMask> s_ActiveSoftMasks = new List<SoftMask>();
         private static readonly List<SoftMask> s_TempRelatables = new List<SoftMask>();
         private static readonly Dictionary<int, Matrix4x4> s_PreviousViewProjectionMatrices = new Dictionary<int, Matrix4x4>();
@@ -750,48 +749,6 @@ namespace Coffee.UISoftMask
             if (_parent && !_parent._children.Contains(this))
             {
                 _parent._children.Add(this);
-            }
-        }
-
-        /// <summary>
-        /// Gets the pixel value.
-        /// </summary>
-        private float GetPixelValue(int x, int y, int[] interactions)
-        {
-            if (!s_ReadTexture)
-            {
-                s_ReadTexture = new Texture2D(1, 1, TextureFormat.ARGB32, false);
-            }
-
-            var currentRt = RenderTexture.active;
-
-            RenderTexture.active = softMaskBuffer;
-            s_ReadTexture.ReadPixels(new Rect(x, y, 1, 1), 0, 0);
-            s_ReadTexture.Apply(false, false);
-            RenderTexture.active = currentRt;
-
-            var colors = s_ReadTexture.GetRawTextureData();
-
-            for (int i = 0; i < 4; i++)
-            {
-                switch (interactions[(i + 3) % 4])
-                {
-                    case 0:
-                        colors[i] = 255;
-                        break;
-                    case 2:
-                        colors[i] = (byte) (255 - colors[i]);
-                        break;
-                }
-            }
-
-            switch (_stencilDepth)
-            {
-                case 0: return (colors[1] / 255f);
-                case 1: return (colors[1] / 255f) * (colors[2] / 255f);
-                case 2: return (colors[1] / 255f) * (colors[2] / 255f) * (colors[3] / 255f);
-                case 3: return (colors[1] / 255f) * (colors[2] / 255f) * (colors[3] / 255f) * (colors[0] / 255f);
-                default: return 0;
             }
         }
     }
