@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
@@ -56,10 +57,10 @@ namespace Coffee.UISoftMask
         private static int s_PreviousHeight;
         private MaterialPropertyBlock _mpb;
         private CommandBuffer _cb;
-        private Material _material;
+        [NonSerialized] private Material _material;
         private RenderTexture _softMaskBuffer;
         private int _stencilDepth;
-        private Mesh _mesh;
+        [NonSerialized] private Mesh _mesh;
         private SoftMask _parent;
         internal readonly List<SoftMask> _children = new List<SoftMask>();
         private bool _hasChanged = false;
