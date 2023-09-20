@@ -240,23 +240,9 @@ namespace Coffee.UISoftMask
         }
 
 
-        Material material
-        {
-            get
-            {
-                return _material
-                    ? _material
-                    : _material =
-                        new Material(s_SoftMaskShader
-                            ? s_SoftMaskShader
-                            : s_SoftMaskShader = Resources.Load<Shader>("SoftMask")) {hideFlags = HideFlags.HideAndDontSave};
-            }
-        }
+        Material material => _material ??= new Material(s_SoftMaskShader ??= Resources.Load<Shader>("SoftMask")) {hideFlags = HideFlags.HideAndDontSave};
 
-        Mesh mesh
-        {
-            get { return _mesh ? _mesh : _mesh = new Mesh() {hideFlags = HideFlags.HideAndDontSave}; }
-        }
+        Mesh mesh => _mesh ??= new Mesh {hideFlags = HideFlags.HideAndDontSave};
 
 
         /// <summary>
