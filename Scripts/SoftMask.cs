@@ -82,13 +82,6 @@ namespace Coffee.UISoftMask
         [SerializeField, Tooltip("Is the soft mask a part of parent soft mask?")]
         private bool m_PartOfParent = false;
 
-        [SerializeField, Tooltip("Self graphic will not be drawn to soft mask buffer.")]
-        private bool m_IgnoreSelfGraphic;
-
-
-        [SerializeField, Tooltip("Self graphic will not be written to stencil buffer.")]
-        private bool m_IgnoreSelfStencil;
-
         /// <summary>
         /// The down sampling rate for soft mask buffer.
         /// </summary>
@@ -215,32 +208,6 @@ namespace Coffee.UISoftMask
             get { return _parent; }
         }
 
-        public bool ignoreSelfGraphic
-        {
-            get { return m_IgnoreSelfGraphic; }
-            set
-            {
-                if (m_IgnoreSelfGraphic == value) return;
-                m_IgnoreSelfGraphic = value;
-                hasChanged = true;
-                graphic.SetVerticesDirtyEx();
-            }
-        }
-
-        public bool ignoreSelfStencil
-        {
-            get { return m_IgnoreSelfStencil; }
-            set
-            {
-                if (m_IgnoreSelfStencil == value) return;
-                m_IgnoreSelfStencil = value;
-                hasChanged = true;
-                graphic.SetVerticesDirtyEx();
-                graphic.SetMaterialDirtyEx();
-            }
-        }
-
-
         Material material => _material ??= new Material(s_SoftMaskShader ??= Resources.Load<Shader>("SoftMask")) {hideFlags = HideFlags.HideAndDontSave};
 
         Mesh mesh => _mesh ??= new Mesh {hideFlags = HideFlags.HideAndDontSave};
@@ -254,7 +221,6 @@ namespace Coffee.UISoftMask
         public override Material GetModifiedMaterial(Material baseMaterial)
         {
             hasChanged = true;
-            if (ignoreSelfStencil) return baseMaterial;
 
             var result = base.GetModifiedMaterial(baseMaterial);
             if (m_IgnoreParent && result != baseMaterial)
@@ -269,67 +235,10 @@ namespace Coffee.UISoftMask
         /// <summary>
         /// Call used to modify mesh.
         /// </summary>
-        void IMeshModifier.ModifyMesh(Mesh mesh)
+        void IMeshModifier.ModifyMesh(MeshBuilder mb)
         {
-            if (isActiveAndEnabled)
-            {
-                if (ignoreSelfGraphic)
-                {
-                    mesh.Clear();
-                    FillMesh(mesh, this.mesh);
-                }
-                else if (ignoreSelfStencil)
-                {
-                    FillMesh(mesh, this.mesh);
-                    mesh.Clear();
-                }
-                else
-                {
-                    FillMesh(mesh, this.mesh);
-                }
-            }
-
-            hasChanged = true;
-
-            static void FillMesh(Mesh src, Mesh dst)
-            {
-                dst.Clear();
-                dst.SetVertices(src.vertices);
-                dst.SetColors(src.colors);
-                dst.SetUVs(0, src.uv);
-                dst.SetUVs(1, src.uv2);
-                dst.SetUVs(2, src.uv2);
-                dst.SetUVs(3, src.uv3);
-                dst.SetNormals(src.normals);
-                dst.SetTangents(src.tangents);
-                dst.SetTriangles(src.triangles, 0);
-                dst.RecalculateBounds();
-            }
-        }
-
-        /// <summary>
-        /// Call used to modify mesh.
-        /// </summary>
-        void IMeshModifier.ModifyMesh(VertexHelper verts)
-        {
-            if (isActiveAndEnabled)
-            {
-                if (ignoreSelfGraphic)
-                {
-                    verts.Clear();
-                    verts.FillMesh(mesh);
-                }
-                else if (ignoreSelfStencil)
-                {
-                    verts.FillMesh(mesh);
-                    verts.Clear();
-                }
-                else
-                {
-                    verts.FillMesh(mesh);
-                }
-            }
-
+            mesh.Clear();
+            mb.FillMesh(mesh);
             hasChanged = true;
         }
 

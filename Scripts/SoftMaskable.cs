@@ -159,7 +159,7 @@ namespace Coffee.UISoftMask
                 var interaction = s_Interactions[i] == 1;
                 var rt = sm.transform as RectTransform;
                 var inRect = RectTransformUtility.RectangleContainsScreenPoint(rt, sp, eventCamera);
-                if (!sm.ignoreSelfGraphic && interaction != inRect) return false;
+                if (interaction != inRect) return false;
 
                 foreach (var child in sm._children)
                 {
@@ -167,7 +167,7 @@ namespace Coffee.UISoftMask
 
                     var childRt = child.transform as RectTransform;
                     var inRectChild = RectTransformUtility.RectangleContainsScreenPoint(childRt, sp, eventCamera);
-                    if (!child.ignoreSelfGraphic && interaction != inRectChild) return false;
+                    if (interaction != inRectChild) return false;
                 }
 
                 sm = sm ? sm.parent : null;
