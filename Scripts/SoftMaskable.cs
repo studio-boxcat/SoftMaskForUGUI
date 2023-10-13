@@ -211,6 +211,8 @@ namespace Coffee.UISoftMask
 #if UNITY_EDITOR
                 s_GameVPId = Shader.PropertyToID("_GameVP");
                 s_GameTVPId = Shader.PropertyToID("_GameTVP");
+                UnityEditor.SceneView.beforeSceneGui -= SceneView_beforeSceneGui; // For safety
+                UnityEditor.SceneView.beforeSceneGui += SceneView_beforeSceneGui;
 #endif
             }
 
@@ -232,13 +234,16 @@ namespace Coffee.UISoftMask
 
             MaterialCache.Unregister(_effectMaterialHash);
             _effectMaterialHash = k_InvalidHash;
+#if UNITY_EDITOR
+            UnityEditor.SceneView.beforeSceneGui -= SceneView_beforeSceneGui;
+#endif
         }
 
 #if UNITY_EDITOR
         private void UpdateMaterialForSceneView(Material mat)
         {
             if(!mat || !graphic || !graphic.canvas || !mat.shader || !mat.shader.name.EndsWith(" (SoftMaskable)")) return;
-
+            
             // Set view and projection matrices.
             Profiler.BeginSample("Set view and projection matrices");
             var c = graphic.canvas.rootCanvas;
@@ -264,9 +269,12 @@ namespace Coffee.UISoftMask
             Profiler.EndSample();
         }
 
-        private void LateUpdate()
+        private void SceneView_beforeSceneGui(UnityEditor.SceneView obj)
         {
-            UpdateMaterialForSceneView(modifiedMaterial);
+            
+            var parentCanvas = GetComponentInParent<Canvas>(); // Don't think we can cache this in case this go is moved to another parent
+            if (parentCanvas != null && parentCanvas.enabled) // Only do this expensive call if the UI element is active
+                UpdateMaterialForSceneView(modifiedMaterial);
         }
 
 
