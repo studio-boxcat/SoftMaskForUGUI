@@ -121,8 +121,7 @@ namespace Coffee.UISoftMask
                 UpdateMaterialForSceneView(mat);
 #endif
 
-                var root = MaskUtilities.FindRootSortOverrideCanvas(transform);
-                var stencil = MaskUtilities.GetStencilDepth(transform, root);
+                var stencil = MaskUtilities.GetStencilDepth(transform);
                 mat.SetVector(s_MaskInteractionId, new Vector4(
                     1 <= stencil ? (m_MaskInteraction >> 0 & 0x3) : 0,
                     2 <= stencil ? (m_MaskInteraction >> 2 & 0x3) : 0,

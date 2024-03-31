@@ -242,11 +242,6 @@ namespace Coffee.UISoftMask
             hasChanged = true;
         }
 
-        public override bool IsRaycastLocationValid(Vector2 sp, Camera eventCamera)
-        {
-            return true;
-        }
-
         /// <summary>
         /// This function is called when the object becomes enabled and active.
         /// </summary>
@@ -469,7 +464,7 @@ namespace Coffee.UISoftMask
             Profiler.BeginSample("UpdateMaskTexture");
 
 
-            _stencilDepth = MaskUtilities.GetStencilDepth(transform, MaskUtilities.FindRootSortOverrideCanvas(transform));
+            _stencilDepth = MaskUtilities.GetStencilDepth(transform);
 
             // Collect children soft masks.
             Profiler.BeginSample("Collect children soft masks");
@@ -532,7 +527,7 @@ namespace Coffee.UISoftMask
 
                     if (i != 0)
                     {
-                        sm._stencilDepth = MaskUtilities.GetStencilDepth(sm.transform, MaskUtilities.FindRootSortOverrideCanvas(sm.transform));
+                        sm._stencilDepth = MaskUtilities.GetStencilDepth(sm.transform);
                     }
 
                     // Set material property.
