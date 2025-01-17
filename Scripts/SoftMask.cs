@@ -279,7 +279,7 @@ namespace Coffee.UISoftMask
             _mpb = new MaterialPropertyBlock();
             _cb = new CommandBuffer();
 
-            graphic.SetVerticesDirtyEx();
+            graphic.SetVerticesDirty();
 
             base.OnEnable();
             _hasStencilStateChanged = false;
@@ -354,8 +354,8 @@ namespace Coffee.UISoftMask
         /// </summary>
         protected override void OnValidate()
         {
-            graphic.SetVerticesDirtyEx();
-            graphic.SetMaterialDirtyEx();
+            graphic.SetVerticesDirty();
+            graphic.SetMaterialDirty();
             OnTransformParentChanged();
             base.OnValidate();
             _hasStencilStateChanged = false;

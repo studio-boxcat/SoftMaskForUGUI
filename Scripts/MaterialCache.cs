@@ -46,8 +46,7 @@ namespace Coffee.UISoftMask
         {
             if (!hash.isValid) return null;
 
-            MaterialEntry entry;
-            if (!s_MaterialMap.TryGetValue(hash, out entry))
+            if (!s_MaterialMap.TryGetValue(hash, out var entry))
             {
                 entry = new MaterialEntry()
                 {
@@ -68,8 +67,7 @@ namespace Coffee.UISoftMask
 
         public static void Unregister(Hash128 hash)
         {
-            MaterialEntry entry;
-            if (!hash.isValid || !s_MaterialMap.TryGetValue(hash, out entry)) return;
+            if (!hash.isValid || !s_MaterialMap.TryGetValue(hash, out var entry)) return;
             //Debug.LogFormat("Unregister: {0}, {1}", hash, entry.referenceCount -1);
 
             if (--entry.referenceCount > 0) return;

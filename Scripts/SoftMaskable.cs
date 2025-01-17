@@ -14,9 +14,6 @@ namespace Coffee.UISoftMask
     [ExecuteAlways]
     [RequireComponent(typeof(Graphic))]
     public class SoftMaskable : MonoBehaviour, IMaterialModifier, ICanvasRaycastFilter
-#if UNITY_EDITOR
-        , ISerializationCallbackReceiver
-# endif
     {
         private const int kVisibleInside = (1 << 0) + (1 << 2) + (1 << 4) + (1 << 6);
         private const int kVisibleOutside = (2 << 0) + (2 << 2) + (2 << 4) + (2 << 6);
@@ -29,9 +26,6 @@ namespace Coffee.UISoftMask
         private static int s_GameTVPId;
         private static List<SoftMaskable> s_ActiveSoftMaskables;
         private static int[] s_Interactions = new int[4];
-
-        [SerializeField, HideInInspector, System.Obsolete]
-        private bool m_Inverse;
 
         [SerializeField, Tooltip("The interaction for each masks."), HideInInspector]
         private int m_MaskInteraction = kVisibleInside;
@@ -54,7 +48,7 @@ namespace Coffee.UISoftMask
                 var intValue = value ? kVisibleOutside : kVisibleInside;
                 if (m_MaskInteraction == intValue) return;
                 m_MaskInteraction = intValue;
-                graphic.SetMaterialDirtyEx();
+                graphic.SetMaterialDirty();
             }
         }
 
@@ -68,7 +62,7 @@ namespace Coffee.UISoftMask
             {
                 if (m_UseStencil == value) return;
                 m_UseStencil = value;
-                graphic.SetMaterialDirtyEx();
+                graphic.SetMaterialDirty();
             }
         }
 
@@ -112,7 +106,7 @@ namespace Coffee.UISoftMask
             // Generate soft maskable material.
             modifiedMaterial = MaterialCache.Register(baseMaterial, _effectMaterialHash, mat =>
             {
-                mat.shader = Shader.Find(string.Format("Hidden/{0} (SoftMaskable)", mat.shader.name));
+                mat.shader = Shader.Find($"Hidden/{mat.shader.name} (SoftMaskable)");
                 mat.SetTexture(s_SoftMaskTexId, softMask.softMaskBuffer);
                 mat.SetInt(s_StencilCompId, m_UseStencil ? (int) CompareFunction.Equal : (int) CompareFunction.Always);
 
@@ -189,7 +183,7 @@ namespace Coffee.UISoftMask
         public void SetMaskInteraction(MaskIntr layer0, MaskIntr layer1, MaskIntr layer2, MaskIntr layer3)
         {
             m_MaskInteraction = (int) layer0 + ((int) layer1 << 2) + ((int) layer2 << 4) + ((int) layer3 << 6);
-            graphic.SetMaterialDirtyEx();
+            graphic.SetMaterialDirty();
         }
 
 
@@ -217,7 +211,7 @@ namespace Coffee.UISoftMask
 
             s_ActiveSoftMaskables.Add(this);
 
-            graphic.SetMaterialDirtyEx();
+            graphic.SetMaterialDirty();
             _softMask = null;
         }
 
@@ -228,7 +222,7 @@ namespace Coffee.UISoftMask
         {
             s_ActiveSoftMaskables.Remove(this);
 
-            graphic.SetMaterialDirtyEx();
+            graphic.SetMaterialDirty();
             _softMask = null;
 
             MaterialCache.Unregister(_effectMaterialHash);
@@ -258,7 +252,7 @@ namespace Coffee.UISoftMask
             {
                 var pos = c.transform.position;
                 var scale = c.transform.localScale.x;
-                var size = (c.transform as RectTransform).sizeDelta;
+                var size = ((RectTransform) c.transform).sizeDelta;
                 var gameVp = Matrix4x4.TRS(new Vector3(0, 0, 0.5f), Quaternion.identity, new Vector3(2 / size.x, 2 / size.y, 0.0005f * scale));
                 var gameTvp = Matrix4x4.TRS(new Vector3(0, 0, 0), Quaternion.identity, new Vector3(1 / pos.x, 1 / pos.y, -2 / 2000f)) * Matrix4x4.Translate(-pos);
 
@@ -282,36 +276,7 @@ namespace Coffee.UISoftMask
         /// </summary>
         private void OnValidate()
         {
-            graphic.SetMaterialDirtyEx();
-        }
-
-        void ISerializationCallbackReceiver.OnBeforeSerialize()
-        {
-        }
-
-        void ISerializationCallbackReceiver.OnAfterDeserialize()
-        {
-#pragma warning disable 0612
-            if (m_Inverse)
-            {
-                m_Inverse = false;
-                m_MaskInteraction = kVisibleOutside;
-            }
-#pragma warning restore 0612
-
-            var current = this;
-            UnityEditor.EditorApplication.delayCall += () =>
-            {
-                if (!current) return;
-                if (!graphic) return;
-                if (graphic.name.Contains("TMP SubMeshUI")) return;
-                if (!graphic.material) return;
-                if (!graphic.material.shader) return;
-                if (graphic.material.shader.name != "Hidden/UI/Default (SoftMaskable)") return;
-
-                graphic.material = null;
-                graphic.SetMaterialDirtyEx();
-            };
+            graphic.SetMaterialDirty();
         }
 #endif
     }
