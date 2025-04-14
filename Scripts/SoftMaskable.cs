@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
@@ -14,6 +16,9 @@ namespace Coffee.UISoftMask
     [ExecuteAlways]
     [RequireComponent(typeof(Graphic))]
     public class SoftMaskable : MonoBehaviour, IMaterialModifier, ICanvasRaycastFilter
+#if UNITY_EDITOR
+        , ISelfValidator
+#endif
     {
         private const int kVisibleInside = (1 << 0) + (1 << 2) + (1 << 4) + (1 << 6);
         private const int kVisibleOutside = (2 << 0) + (2 << 2) + (2 << 4) + (2 << 6);
@@ -106,7 +111,7 @@ namespace Coffee.UISoftMask
             // Generate soft maskable material.
             modifiedMaterial = MaterialCache.Register(baseMaterial, _effectMaterialHash, mat =>
             {
-                mat.shader = Shader.Find($"Hidden/{mat.shader.name} (SoftMaskable)");
+                mat.shader = Shader.Find(ResolveShaderName(mat.shader.name));
                 mat.SetTexture(s_SoftMaskTexId, softMask.softMaskBuffer);
                 mat.SetInt(s_StencilCompId, m_UseStencil ? (int) CompareFunction.Equal : (int) CompareFunction.Always);
 
@@ -232,6 +237,16 @@ namespace Coffee.UISoftMask
 #endif
         }
 
+        private static string ResolveShaderName(string shaderName)
+        {
+            return shaderName switch
+            {
+                "UI/Default" => "Hidden/UI/Default (SoftMaskable)",
+                "MeowTower/UI/UI-PremultAlpha" => "Hidden/UI/PremultAlpha (SoftMaskable)",
+                _ => throw new System.Exception($"Shader {shaderName} not supported.")
+            };
+        }
+
 #if UNITY_EDITOR
         private void UpdateMaterialForSceneView(Material mat)
         {
@@ -277,6 +292,26 @@ namespace Coffee.UISoftMask
         private void OnValidate()
         {
             graphic.SetMaterialDirty();
+        }
+
+        void ISelfValidator.Validate(SelfValidationResult result)
+        {
+            var g = GetComponent<Graphic>();
+            if (!g || !g.material || !g.material.shader)
+            {
+                result.AddError("Graphic component is missing or has no material/shader.");
+                return;
+            }
+
+            var shader = g.material.shader;
+            try
+            {
+                ResolveShaderName(shader.name);
+            }
+            catch (Exception e)
+            {
+                result.AddError(e.Message);
+            }
         }
 #endif
     }
