@@ -16,7 +16,6 @@ namespace Coffee.UISoftMask
     {
         private const int k_PreviewSize = 128;
         private const string k_PrefsPreview = "SoftMaskEditor_Preview";
-        private static readonly List<Graphic> s_Graphics = new List<Graphic>();
         private static bool s_Preview;
 
         private void OnEnable()
@@ -29,8 +28,7 @@ namespace Coffee.UISoftMask
             base.OnInspectorGUI();
 
             var current = target as SoftMask;
-            current.GetComponentsInChildren<Graphic>(true, s_Graphics);
-            var fixTargets = s_Graphics
+            var fixTargets = current.GetGraphicsInChildrenShared(true)
                 .Where(x => x.gameObject != current.gameObject)
                 .Where(x => !x.GetComponent<SoftMaskable>() && (!x.GetComponent<Mask>() || x.GetComponent<Mask>().showMaskGraphic))
                 .ToList();
