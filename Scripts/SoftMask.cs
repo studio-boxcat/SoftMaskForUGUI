@@ -352,12 +352,11 @@ namespace Coffee.UISoftMask
         /// <summary>
         /// This function is called when the script is loaded or a value is changed in the inspector (Called in the editor only).
         /// </summary>
-        protected override void OnValidate()
+        protected void OnValidate()
         {
             graphic.SetVerticesDirty();
             graphic.SetMaterialDirty();
             OnTransformParentChanged();
-            base.OnValidate();
             _hasStencilStateChanged = false;
         }
 #endif
