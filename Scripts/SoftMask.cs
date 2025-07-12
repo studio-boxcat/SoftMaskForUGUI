@@ -352,7 +352,7 @@ namespace Coffee.UISoftMask
         /// <summary>
         /// This function is called when the script is loaded or a value is changed in the inspector (Called in the editor only).
         /// </summary>
-        protected void OnValidate()
+        protected new void OnValidate()
         {
             graphic.SetVerticesDirty();
             graphic.SetMaterialDirty();
