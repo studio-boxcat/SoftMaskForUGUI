@@ -42,7 +42,7 @@ namespace Coffee.UISoftMask
         }
 #endif
 
-        public static Material Register(Material material, Hash128 hash, Action<Material> onModify)
+        public static Material Register(Material baseMaterial, Hash128 hash, Action<Material> onModify)
         {
             if (!hash.isValid) return null;
 
@@ -50,7 +50,7 @@ namespace Coffee.UISoftMask
             {
                 entry = new MaterialEntry()
                 {
-                    material = new Material(material)
+                    material = new Material(baseMaterial)
                     {
                         hideFlags = HideFlags.HideAndDontSave,
                     },

@@ -119,9 +119,9 @@ namespace Coffee.UISoftMask
             serializedObject.ApplyModifiedProperties();
 
             var current = target as SoftMaskable;
-            if (current == null) return;
+            if (!current) return;
 
-            var mask = current.softMask;
+            var mask = current.ResolveMask();
             if (mask) return;
 
             GUILayout.BeginHorizontal();
