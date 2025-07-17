@@ -15,7 +15,7 @@ namespace Coffee.UISoftMask
     /// </summary>
     [ExecuteAlways]
     [RequireComponent(typeof(Graphic))]
-    public class SoftMaskable : MonoBehaviour, IMaterialModifier, ICanvasRaycastFilter
+    public class SoftMaskable : MonoBehaviour, IMaterialModifier
 #if UNITY_EDITOR
         , ISelfValidator
 #endif
@@ -133,45 +133,6 @@ namespace Coffee.UISoftMask
             MaterialCache.Unregister(previousHash);
 
             return modifiedMaterial;
-        }
-
-        /// <summary>
-        /// Given a point and a camera is the raycast valid.
-        /// </summary>
-        /// <returns>Valid.</returns>
-        /// <param name="sp">Screen position.</param>
-        /// <param name="eventCamera">Raycast camera.</param>
-        bool ICanvasRaycastFilter.IsRaycastLocationValid(Vector2 sp, Camera eventCamera)
-        {
-            if (!isActiveAndEnabled || !softMask)
-                return true;
-            if (!RectTransformUtility.RectangleContainsScreenPoint(transform as RectTransform, sp, eventCamera))
-                return false;
-
-            var sm = _softMask;
-            for (var i = 0; i < 4; i++)
-            {
-                if (!sm) break;
-
-                s_Interactions[i] = sm ? ((m_MaskInteraction >> i * 2) & 0x3) : 0;
-                var interaction = s_Interactions[i] == 1;
-                var rt = sm.transform as RectTransform;
-                var inRect = RectTransformUtility.RectangleContainsScreenPoint(rt, sp, eventCamera);
-                if (interaction != inRect) return false;
-
-                foreach (var child in sm._children)
-                {
-                    if (!child) continue;
-
-                    var childRt = child.transform as RectTransform;
-                    var inRectChild = RectTransformUtility.RectangleContainsScreenPoint(childRt, sp, eventCamera);
-                    if (interaction != inRectChild) return false;
-                }
-
-                sm = sm ? sm.parent : null;
-            }
-
-            return true;
         }
 
         /// <summary>
