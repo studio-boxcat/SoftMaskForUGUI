@@ -20,7 +20,8 @@ namespace Coffee.UISoftMask
         , ISelfValidator
 #endif
     {
-        private const int kVisibleInside = (1 << 0) + (1 << 2) + (1 << 4) + (1 << 6);
+        private const int kVisibleInside = (1 << 0) + (1 << 2) + (1 << 4) + (1 << 6); // 170
+        private const int kVisibleOutside = (1 << 1) + (1 << 3) + (1 << 5) + (1 << 7); // 85
         private static readonly Hash128 k_InvalidHash = new Hash128();
 
         private static readonly int s_SoftMaskTexId = Shader.PropertyToID("_SoftMaskTex");
@@ -31,7 +32,7 @@ namespace Coffee.UISoftMask
         private int m_MaskInteraction = kVisibleInside;
 
         [SerializeField, Tooltip("Use stencil to mask.")]
-        private bool m_UseStencil = true;
+        private bool m_UseStencil = false;
 
         [NonSerialized] private Graphic? _graphic;
         private Hash128 _effectMaterialHash;
@@ -99,6 +100,14 @@ namespace Coffee.UISoftMask
             return modifiedMaterial;
         }
 
+        /// <summary>
+        /// Set the interaction for each mask.
+        /// </summary>
+        public void SetMaskInteraction(bool visibleInside)
+        {
+            m_MaskInteraction = visibleInside ? kVisibleInside : kVisibleOutside;
+            graphic.SetMaterialDirty();
+        }
 
         /// <summary>
         /// This function is called when the object becomes enabled and active.
