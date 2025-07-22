@@ -26,7 +26,6 @@ namespace Coffee.UISoftMask
         /// </summary>
         public enum DownSamplingRate { None = 0, x1 = 1, x2 = 2, x4 = 4, x8 = 8, }
 
-        private static Material? s_MaskMat;
         private static readonly List<SoftMask> s_ActiveSoftMasks = new List<SoftMask>();
         private static int s_ColorMaskId;
         private static int s_MainTexId;
@@ -77,8 +76,6 @@ namespace Coffee.UISoftMask
         [NonSerialized, ShowInInspector, ReadOnly, PreviewField, HorizontalGroup("Preview"), HideLabel]
         private Mesh? _graphicMesh; // hook graphic mesh into SoftMask.
         private Mesh graphicMesh => _graphicMesh ??= MeshPool.CreateDynamicMesh();
-        [NonSerialized]
-        private Material? _maskMat;
         [NonSerialized, ShowInInspector, ReadOnly, PreviewField, HorizontalGroup("Preview"), HideLabel]
         private RenderTexture? _maskRt;
         private MaterialPropertyBlock? _mpb;
@@ -113,6 +110,8 @@ namespace Coffee.UISoftMask
             graphic.SetVerticesDirty();
 
             base.OnEnable();
+
+            SetAllMaskablesDirty(this);
         }
 
         /// <summary>
@@ -133,8 +132,6 @@ namespace Coffee.UISoftMask
 
             DestroyImmediate(_graphicMesh);
             _graphicMesh = null;
-            DestroyImmediate(_maskMat);
-            _maskMat = null;
 
             if (_maskRt)
             {
@@ -143,6 +140,8 @@ namespace Coffee.UISoftMask
             }
 
             base.OnDisable();
+
+            SetAllMaskablesDirty(this);
         }
 
         private void OnTransformParentChanged()
@@ -230,20 +229,30 @@ namespace Coffee.UISoftMask
             }
 
             // Set material property.
-            _maskMat ??= new Material(Resources.Load<Shader>("SoftMask")) { hideFlags = HideFlags.HideAndDontSave };
-            _maskMat.SetInt(s_ColorMaskId, 8);
             _mpb ??= new MaterialPropertyBlock();
             _mpb.SetTexture(s_MainTexId, graphic.mainTexture);
             _mpb.SetFloat(s_SoftnessId, m_Softness);
             _mpb.SetFloat(s_Alpha, m_Alpha);
 
             // Draw mesh.
-            _cb.DrawMesh(graphicMesh, transform.localToWorldMatrix, _maskMat, 0, 0, _mpb);
+            var mat = GetSharedMaskMaterial();
+            _cb.DrawMesh(graphicMesh, transform.localToWorldMatrix, mat, 0, 0, _mpb);
 
             Profiler.EndSample();
 
             Graphics.ExecuteCommandBuffer(_cb);
             Profiler.EndSample();
+        }
+
+        [NonSerialized] private static Material? _maskMat;
+        private static Material GetSharedMaskMaterial() => _maskMat ??= Resources.Load<Material>("SoftMask");
+
+        private static readonly List<SoftMaskable> _maskables = new();
+        private static void SetAllMaskablesDirty(SoftMask sm)
+        {
+            sm.GetComponentsInChildren(includeInactive: false, _maskables); // no need to clear
+            foreach (var maskable in _maskables)
+                maskable.graphic.SetMaterialDirty();
         }
 
         /// <summary>

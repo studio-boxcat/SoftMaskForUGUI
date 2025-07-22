@@ -7,7 +7,6 @@ Shader "Hidden/SoftMask" {
 		Cull Off
 		ZWrite Off
 		Blend SrcAlpha One
-		ColorMask [_ColorMask]
 
 		Pass {  
 			CGPROGRAM
