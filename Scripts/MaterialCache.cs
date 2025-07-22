@@ -1,80 +1,130 @@
-﻿using System.Collections.Generic;
+// ReSharper disable InconsistentNaming
+
+#nullable enable
+using System.Collections.Generic;
 using System;
 using UnityEngine;
+using UnityEngine.Rendering;
+using Object = UnityEngine.Object;
 
 namespace Coffee.UISoftMask
 {
-    internal class MaterialEntry
+    internal struct MaterialLink
     {
-        public Material material;
-        public int referenceCount;
+        private ulong _hash;
+        public ulong Hash => _hash;
+        private Material? _material;
+
+        public MaterialLink(ulong hash, Material? material)
+        {
+            _hash = hash;
+            _material = material;
+        }
+
+        public Material? Get() => _material;
 
         public void Release()
         {
-            if (material)
-            {
-#if UNITY_EDITOR
-                if (!Application.isPlaying)
-                    UnityEngine.Object.DestroyImmediate(material, false);
-                else
-#endif
-                    UnityEngine.Object.Destroy(material);
-            }
+            if (_material is null) return;
 
-            material = null;
+            MaterialCache.Unregister(_hash);
+            _material = null;
+            _hash = 0;
         }
     }
 
     internal static class MaterialCache
     {
-        static readonly Dictionary<Hash128, MaterialEntry> s_MaterialMap = new Dictionary<Hash128, MaterialEntry>();
-
-#if UNITY_EDITOR
-        [UnityEditor.InitializeOnLoadMethod]
-        private static void ClearCache()
+        private class Entry
         {
-            foreach (var entry in s_MaterialMap.Values)
+            public readonly Material material;
+            public int referenceCount;
+            public Entry(Material material) => this.material = material;
+        }
+
+        private static readonly Dictionary<ulong, Entry> s_MaterialMap = new();
+
+        private static readonly ShaderID s_StencilCompId = new("_StencilComp");
+        private static readonly ShaderID s_MaskInteractionId = new("_MaskInteraction");
+
+        public static int ResolveShaderIndex(string shaderName)
+        {
+            return shaderName switch
             {
-                entry.Release();
+                "UI/Default" => 0,
+                "MeowTower/UI/UI-PremultAlpha" => 1,
+                _ => throw new Exception($"Shader {shaderName} not supported.")
+            };
+        }
+
+        public static void Register(
+            ref MaterialLink link, Material baseMat, MaskInteraction maskInteraction, int maskInstanceID, out bool created)
+        {
+            // L.I($"[SoftMark.MaterialCache] Registering material: {baseMat.name}, maskInteraction={maskInteraction}, depth={depth}, stencil={stencil}, mask={mask}");
+
+            var shaderIndex = ResolveShaderIndex(baseMat.shader.name);
+            var propField = (uint) shaderIndex | (uint) maskInteraction << 8;
+            var hash = ((ulong) propField << 32) | (uint) maskInstanceID;
+            if (hash == link.Hash)
+            {
+                created = false;
+                return;
             }
 
-            s_MaterialMap.Clear();
-        }
-#endif
+            // Release the old material link.
+            link.Release();
 
-        public static Material Register(Material baseMaterial, Hash128 hash, Action<Material> onModify)
+            if (s_MaterialMap.TryGetValue(hash, out var entry))
+            {
+                entry.referenceCount++;
+                link = new MaterialLink(hash, entry.material);
+                created = false;
+                return;
+            }
+
+            L.I($"[SoftMark.MaterialCache] Creating material: {baseMat.name}, hash={hash}");
+
+            var shader = Shader.Find(shaderIndex switch
+            {
+                0 => "Hidden/UI/Default (SoftMaskable)",
+                1 => "Hidden/UI/PremultAlpha (SoftMaskable)",
+                _ => throw new Exception($"Shader {baseMat.shader.name} not supported.")
+            });
+
+            var mat = new Material(shader);
+            mat.SetHideAndDontSave();
+
+            mat.SetInt(s_StencilCompId.Val, (int) CompareFunction.Always);
+            var mi = (byte) maskInteraction;
+            mat.SetVector(s_MaskInteractionId.Val, new Vector4(mi & 0b11, 0, 0, 0));
+
+            entry = new Entry(mat) { referenceCount = 1 };
+            link = new MaterialLink(hash, mat);
+            created = true;
+
+            s_MaterialMap.Add(hash, entry);
+#if DEBUG
+            if (s_MaterialMap.Count > 32)
+                L.E("[SoftMark.MaterialCache] Material cache size exceeded 32. Consider optimizing material usage.");
+#endif
+        }
+
+        internal static void Unregister(ulong hash)
         {
-            if (!hash.isValid) return null;
+            // L.I($"[SoftMark.MaterialCache] Unregistering material, hash={hash}");
 
             if (!s_MaterialMap.TryGetValue(hash, out var entry))
             {
-                entry = new MaterialEntry()
-                {
-                    material = new Material(baseMaterial)
-                    {
-                        hideFlags = HideFlags.HideAndDontSave,
-                    },
-                };
-
-                onModify(entry.material);
-                s_MaterialMap.Add(hash, entry);
+                L.E($"[SoftMark.MaterialCache] Unregister: Material not found, hash={hash}");
+                return;
             }
 
-            entry.referenceCount++;
-            //Debug.LogFormat("Register: {0}, {1} (Total: {2})", hash, entry.referenceCount, materialMap.Count);
-            return entry.material;
-        }
-
-        public static void Unregister(Hash128 hash)
-        {
-            if (!hash.isValid || !s_MaterialMap.TryGetValue(hash, out var entry)) return;
-            //Debug.LogFormat("Unregister: {0}, {1}", hash, entry.referenceCount -1);
-
-            if (--entry.referenceCount > 0) return;
-
-            entry.Release();
-            s_MaterialMap.Remove(hash);
-            //Debug.LogFormat("Unregister: Release Emtry: {0}, {1} (Total: {2})", hash, entry.referenceCount, materialMap.Count);
+            if (--entry.referenceCount is 0)
+            {
+                L.I($"[SoftMark.MaterialCache] Destroying material: {entry.material.name}, hash={hash}");
+                Object.DestroyImmediate(entry.material);
+                s_MaterialMap.Remove(hash);
+            }
         }
     }
 }

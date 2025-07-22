@@ -19,7 +19,7 @@ namespace Coffee.UISoftMask
         {
             // Subscribe to the event when the first maskable is added.
             if (_maskables.IsEmpty())
-                SceneView.beforeSceneGui += Update;
+                SceneView.beforeSceneGui += UpdateMaskables;
 
             _maskables.Add(maskable);
         }
@@ -30,7 +30,7 @@ namespace Coffee.UISoftMask
 
             // Unsubscribe from the event when no maskables are left.
             if (_maskables.IsEmpty())
-                SceneView.beforeSceneGui -= Update;
+                SceneView.beforeSceneGui -= UpdateMaskables;
         }
 
         public static void SetUpMaterialProperties(Material mat, Camera cam)
@@ -49,7 +49,7 @@ namespace Coffee.UISoftMask
             Profiler.EndSample();
         }
 
-        private static void Update(SceneView obj)
+        private static void UpdateMaskables(SceneView sceneView)
         {
             Assert.IsTrue(_maskables.NotEmpty(), "There are no SoftMaskable components to update in the scene view.");
 
