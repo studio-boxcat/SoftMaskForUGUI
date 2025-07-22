@@ -46,7 +46,7 @@ namespace Coffee.UISoftMask
         private static ShaderID s_SoftMaskTexId = new("_SoftMaskTex");
         private static ShaderID s_MaskInteractionId = new("_MaskInteraction");
 
-        public static int ResolveShaderIndex(string shaderName)
+        public static byte ResolveShaderIndex(string shaderName)
         {
             return shaderName switch
             {
@@ -62,10 +62,8 @@ namespace Coffee.UISoftMask
             // L.I($"[SoftMark.MaterialCache] Registering material: {baseMat.name}, maskInteraction={maskInteraction}, depth={depth}, stencil={stencil}, mask={mask}");
 
             var shaderIndex = ResolveShaderIndex(baseMat.shader.name);
-            var propField = (uint) shaderIndex | (uint) maskInteraction << 8;
-            var hash = ((ulong) propField << 32) | (uint) maskRt.GetInstanceID();
-            if (hash == link.Hash)
-                return;
+            var hash = Numeric.PackU64(maskRt.GetInstanceID(), shaderIndex, (byte) maskInteraction);
+            if (hash == link.Hash) return;
 
             // Release the old material link.
             link.Release();
