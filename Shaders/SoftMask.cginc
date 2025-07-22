@@ -2,7 +2,6 @@
 #define UI_SOFTMASK_INCLUDED
 
 sampler2D _SoftMaskTex;
-float _Stencil;
 float4x4 _GameVP;
 float4x4 _GameTVP;
 half4 _MaskInteraction;

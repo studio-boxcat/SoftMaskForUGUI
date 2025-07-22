@@ -5,15 +5,7 @@ Shader "Hidden/UI/PremultAlpha (SoftMaskable)"
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
 
-        _StencilComp ("Stencil Comparison", Float) = 8
-        _Stencil ("Stencil ID", Float) = 0
-        _StencilOp ("Stencil Operation", Float) = 0
-        _StencilWriteMask ("Stencil Write Mask", Float) = 255
-        _StencilReadMask ("Stencil Read Mask", Float) = 255
-
         _ColorMask ("Color Mask", Float) = 15
-
-        [Toggle(UNITY_UI_ALPHACLIP)] _UseUIAlphaClip ("Use Alpha Clip", Float) = 0
     }
 
     SubShader
@@ -25,15 +17,6 @@ Shader "Hidden/UI/PremultAlpha (SoftMaskable)"
             "RenderType"="Transparent"
             "PreviewType"="Plane"
             "CanUseSpriteAtlas"="True"
-        }
-
-        Stencil
-        {
-            Ref [_Stencil]
-            Comp [_StencilComp]
-            Pass [_StencilOp]
-            ReadMask [_StencilReadMask]
-            WriteMask [_StencilWriteMask]
         }
 
         Cull Off
@@ -54,7 +37,6 @@ Shader "Hidden/UI/PremultAlpha (SoftMaskable)"
             #include "UnityUI.cginc"
 
             #pragma multi_compile __ UNITY_UI_CLIP_RECT
-            #pragma multi_compile __ UNITY_UI_ALPHACLIP
 
             #include "Packages/com.coffee.softmask-for-ugui/Shaders/SoftMask.cginc"	// Add for soft mask
             #pragma shader_feature __ SOFTMASK_EDITOR	// Add for soft mask
@@ -99,10 +81,6 @@ Shader "Hidden/UI/PremultAlpha (SoftMaskable)"
 
                 // XXX: alpha 뿐만 아니라 rgb 값도 함께 감쇄시킴.
                 color *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);
-
-                #ifdef UNITY_UI_ALPHACLIP
-                clip (color.a - 0.001);
-                #endif
 
                 // XXX: alpha 뿐만 아니라 rgb 값도 함께 감쇄시킴.
                 color *= SoftMask(IN.vertex, IN.worldPosition);	// Add for soft mask

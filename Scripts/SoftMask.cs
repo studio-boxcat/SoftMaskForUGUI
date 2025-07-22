@@ -32,8 +32,6 @@ namespace Coffee.UISoftMask
         private static int s_MainTexId;
         private static int s_SoftnessId;
         private static int s_Alpha;
-        private static int s_PreviousWidth;
-        private static int s_PreviousHeight;
 
         [SerializeField, OnValueChanged("SetMaskRtDirty")]
         private DownSamplingRate m_DownSamplingRate = DownSamplingRate.x4;
@@ -185,7 +183,7 @@ namespace Coffee.UISoftMask
         {
             foreach (var sm in s_ActiveSoftMasks)
             {
-                if (sm._markRtDirty || sm.transform.hasChanged)
+                if (sm._markRtDirty || sm.transform.UnsetHasChanged())
                     sm.UpdateMaskRt();
             }
         }
@@ -195,7 +193,7 @@ namespace Coffee.UISoftMask
         /// </summary>
         private void UpdateMaskRt()
         {
-            L.I("[SoftMask] Updating mask buffer: " + this, this);
+            // L.I("[SoftMask] Updating mask buffer: " + this, this);
 
             Profiler.BeginSample("UpdateMaskRt");
 

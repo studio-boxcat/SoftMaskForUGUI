@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System;
 using UnityEngine;
-using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
 namespace Coffee.UISoftMask
@@ -44,8 +43,8 @@ namespace Coffee.UISoftMask
 
         private static readonly Dictionary<ulong, Entry> s_MaterialMap = new();
 
-        private static readonly ShaderID s_StencilCompId = new("_StencilComp");
-        private static readonly ShaderID s_MaskInteractionId = new("_MaskInteraction");
+        private static ShaderID s_SoftMaskTexId = new("_SoftMaskTex");
+        private static ShaderID s_MaskInteractionId = new("_MaskInteraction");
 
         public static int ResolveShaderIndex(string shaderName)
         {
@@ -58,18 +57,15 @@ namespace Coffee.UISoftMask
         }
 
         public static void Register(
-            ref MaterialLink link, Material baseMat, MaskInteraction maskInteraction, int maskInstanceID, out bool created)
+            ref MaterialLink link, Material baseMat, MaskInteraction maskInteraction, RenderTexture maskRt)
         {
             // L.I($"[SoftMark.MaterialCache] Registering material: {baseMat.name}, maskInteraction={maskInteraction}, depth={depth}, stencil={stencil}, mask={mask}");
 
             var shaderIndex = ResolveShaderIndex(baseMat.shader.name);
             var propField = (uint) shaderIndex | (uint) maskInteraction << 8;
-            var hash = ((ulong) propField << 32) | (uint) maskInstanceID;
+            var hash = ((ulong) propField << 32) | (uint) maskRt.GetInstanceID();
             if (hash == link.Hash)
-            {
-                created = false;
                 return;
-            }
 
             // Release the old material link.
             link.Release();
@@ -78,7 +74,6 @@ namespace Coffee.UISoftMask
             {
                 entry.referenceCount++;
                 link = new MaterialLink(hash, entry.material);
-                created = false;
                 return;
             }
 
@@ -92,15 +87,11 @@ namespace Coffee.UISoftMask
             });
 
             var mat = new Material(shader);
+            ConfigureMaterial(mat, maskInteraction, maskRt);
             mat.SetHideAndDontSave();
-
-            mat.SetInt(s_StencilCompId.Val, (int) CompareFunction.Always);
-            var mi = (byte) maskInteraction;
-            mat.SetVector(s_MaskInteractionId.Val, new Vector4(mi & 0b11, 0, 0, 0));
 
             entry = new Entry(mat) { referenceCount = 1 };
             link = new MaterialLink(hash, mat);
-            created = true;
 
             s_MaterialMap.Add(hash, entry);
 #if DEBUG
@@ -125,6 +116,16 @@ namespace Coffee.UISoftMask
                 Object.DestroyImmediate(entry.material);
                 s_MaterialMap.Remove(hash);
             }
+        }
+
+        public static bool IsMaterialConfigured(Material mat) => mat.HasVector(s_MaskInteractionId.Val);
+
+        public static void ConfigureMaterial(Material mat, MaskInteraction maskInteraction, RenderTexture maskRt)
+        {
+            var mi = (byte) maskInteraction;
+            mat.SetTexture(s_SoftMaskTexId.Val, maskRt);
+            mat.SetVector(s_MaskInteractionId.Val, new Vector4(mi & 0b11, 0, 0, 0));
+            mat.SetHideAndDontSave();
         }
     }
 }

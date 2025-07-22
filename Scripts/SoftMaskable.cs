@@ -47,16 +47,20 @@ namespace Coffee.UISoftMask
                 return baseMaterial;
 
             // Generate soft maskable material.
+            var maskRt = softMask!.PopulateMaskRt();
             MaterialCache.Register(
-                ref _materialLink, baseMaterial, m_MaskInteraction, softMask!.GetInstanceID(),
-                out var created);
+                ref _materialLink, baseMaterial, m_MaskInteraction, maskRt);
 
             var mat = _materialLink.Get()!;
-            mat.SetTexture("_SoftMaskTex", softMask.PopulateMaskRt());
 
 #if UNITY_EDITOR
-            if (created)
-                SoftMaskSceneViewHandler.SetUpMaterialProperties(mat, graphic.canvas.worldCamera);
+            // XXX: material properties will be cleared after the scene or prefab is saved.
+            if (MaterialCache.IsMaterialConfigured(mat) is false)
+            {
+                L.W("[SoftMaskable] Material properties were cleared. Reconfiguring material.");
+                MaterialCache.ConfigureMaterial(mat, m_MaskInteraction, maskRt);
+                SoftMaskSceneViewHandler.SetUpGameVP(mat, graphic.canvas.worldCamera);
+            }
 #endif
 
             return mat;
