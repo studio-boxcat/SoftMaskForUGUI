@@ -159,20 +159,24 @@ namespace Coffee.UISoftMask
         {
             // Check the size of soft mask buffer.
             GetDownSamplingSize(m_DownSamplingRate, out var w, out var h);
+
+            if (_maskRt && _maskRt!.width == w && _maskRt.height == h)
+                return _maskRt;
+
             if (_maskRt)
             {
-                _maskRt!.Release();
+                L.I($"[SoftMask] Resizing soft mask buffer: {w}x{h}, down sampling rate: {m_DownSamplingRate}.");
+                _maskRt!.Release(); // release the buffer to change the size.
                 _maskRt.width = w;
                 _maskRt.height = h;
             }
             else
             {
                 L.I($"[SoftMask] Creating soft mask buffer: {w}x{h}, down sampling rate: {m_DownSamplingRate}.");
-                _maskRt = RenderTexture.GetTemporary(w, h, depthBuffer: 0, RenderTextureFormat.ARGB32,
-                    readWrite: RenderTextureReadWrite.Default, antiAliasing: 1, RenderTextureMemoryless.Depth);
-                SetMaskRtDirty();
+                _maskRt = RenderTexture.GetTemporary(w, h, depthBuffer: 0, RenderTextureFormat.R8);
             }
 
+            SetMaskRtDirty();
             return _maskRt;
         }
 
@@ -269,9 +273,6 @@ namespace Coffee.UISoftMask
 #if UNITY_EDITOR
         void ISelfValidator.Validate(SelfValidationResult result)
         {
-            if (m_DownSamplingRate is DownSamplingRate.None or DownSamplingRate.x1)
-                result.AddError("Down sampling rate must be set to a value other than None.");
-
             if (graphic && graphic.canvas && graphic.canvas.renderMode is not RenderMode.ScreenSpaceCamera)
                 result.AddError("SoftMask only works with ScreenSpaceCamera render mode.");
 

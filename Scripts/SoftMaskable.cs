@@ -130,7 +130,7 @@ namespace Coffee.UISoftMask
             if (g is MaskableGraphic { maskable: true })
                 result.AddError("MaskableGraphic is enabled. SoftMaskable should be used with non-maskable graphics to avoid conflicts.");
 
-            if (this.HasComponentInParent<SoftMask>() is false)
+            if (this.HasComponentInParent<SoftMask>(includeInactive: true) is false)
                 result.AddError("SoftMaskable must be a child of SoftMask component to work properly.");
 
             if (ComponentSearch.AnyComponentExcept<IMaterialModifier>(this,
