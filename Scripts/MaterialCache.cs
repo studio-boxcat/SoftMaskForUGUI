@@ -116,13 +116,13 @@ namespace Coffee.UISoftMask
             }
         }
 
-        public static bool IsMaterialConfigured(Material mat) => mat.HasVector(s_MaskInteractionId.Val);
+        public static bool IsMaterialConfigured(Material mat) => mat.HasFloat(s_MaskInteractionId.Val);
 
         public static void ConfigureMaterial(Material mat, MaskInteraction maskInteraction, RenderTexture maskRt)
         {
             var mi = (byte) maskInteraction;
             mat.SetTexture(s_SoftMaskTexId.Val, maskRt);
-            mat.SetVector(s_MaskInteractionId.Val, new Vector4(mi & 0b11, 0, 0, 0));
+            mat.SetFloat(s_MaskInteractionId.Val, mi & 0b11);
             mat.SetHideAndDontSave();
         }
     }
