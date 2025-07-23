@@ -53,11 +53,11 @@ namespace Coffee.UISoftMask
 
             var mat = _materialLink.Get()!;
 
-#if UNITY_EDITOR
+#if DEBUG
             // XXX: material properties will be cleared after the scene or prefab is saved.
             if (MaterialCache.IsMaterialConfigured(mat) is false)
             {
-                L.W("[SoftMaskable] Material properties were cleared. Reconfiguring material.");
+                if (Editing.No(this)) L.E("[SoftMaskable] Material properties were cleared. Reconfiguring material: " + this, this);
                 MaterialCache.ConfigureMaterial(mat, m_MaskInteraction, maskRt);
                 SoftMaskSceneViewHandler.SetUpGameVP(mat, graphic.canvas.worldCamera);
             }
