@@ -27,7 +27,6 @@ namespace Coffee.UISoftMask
         public enum DownSamplingRate { None = 0, x1 = 1, x2 = 2, x4 = 4, x8 = 8, }
 
         private static readonly List<SoftMask> s_ActiveSoftMasks = new List<SoftMask>();
-        private static int s_ColorMaskId;
         private static int s_MainTexId;
         private static int s_SoftnessId;
         private static int s_Alpha;
@@ -75,7 +74,6 @@ namespace Coffee.UISoftMask
 
         [NonSerialized, ShowInInspector, ReadOnly, PreviewField, HorizontalGroup("Preview"), HideLabel]
         private Mesh? _graphicMesh; // hook graphic mesh into SoftMask.
-        private Mesh graphicMesh => _graphicMesh ??= MeshPool.CreateDynamicMesh();
         [NonSerialized, ShowInInspector, ReadOnly, PreviewField, HorizontalGroup("Preview"), HideLabel]
         private RenderTexture? _maskRt;
         private MaterialPropertyBlock? _mpb;
@@ -90,8 +88,9 @@ namespace Coffee.UISoftMask
 
         void IMeshModifier.ModifyMesh(MeshBuilder mb)
         {
-            graphicMesh.Clear();
-            mb.FillMesh(graphicMesh);
+            _graphicMesh ??= MeshPool.CreateDynamicMesh();
+            _graphicMesh.Clear();
+            mb.FillMesh(_graphicMesh);
             SetMaskRtDirty();
         }
 
@@ -186,7 +185,9 @@ namespace Coffee.UISoftMask
         {
             foreach (var sm in s_ActiveSoftMasks)
             {
-                if (sm._markRtDirty || sm.transform.UnsetHasChanged())
+                if (sm.transform.UnsetHasChanged())
+                    sm._markRtDirty = true;
+                if (sm._markRtDirty)
                     sm.UpdateMaskRt();
             }
         }
@@ -198,13 +199,31 @@ namespace Coffee.UISoftMask
         {
             // L.I("[SoftMask] Updating mask buffer: " + this, this);
 
+            if (_graphicMesh is null)
+            {
+                L.W("[SoftMask] No graphic mesh found. Skipping mask update.");
+                return;
+            }
+
+            var cam = CanvasUtils.ResolveWorldCamera(graphic);
+            if (!cam)
+            {
+                L.W("[SoftMask] No camera found: " + name);
+                return;
+            }
+
             Profiler.BeginSample("UpdateMaskRt");
 
             _markRtDirty = false;
 
+            if (_cb is null)
+            {
+                _cb = new CommandBuffer();
+                _mpb = new MaterialPropertyBlock();
+            }
+
             // CommandBuffer.
             Profiler.BeginSample("Initialize CommandBuffer");
-            _cb = new CommandBuffer();
             _cb.Clear();
             _cb.SetRenderTarget(PopulateMaskRt());
             _cb.ClearRenderTarget(false, true, backgroundColor: default);
@@ -212,7 +231,6 @@ namespace Coffee.UISoftMask
 
             // Set view and projection matrices.
             Profiler.BeginSample("Set view and projection matrices");
-            var cam = graphic.canvas.worldCamera;
             _cb.SetViewProjectionMatrices(cam.worldToCameraMatrix,
                 GL.GetGPUProjectionMatrix(cam.projectionMatrix, renderIntoTexture: false));
             Profiler.EndSample();
@@ -220,23 +238,21 @@ namespace Coffee.UISoftMask
             // Draw soft masks.
             Profiler.BeginSample("Draw Mesh");
 
-            if (s_ColorMaskId is 0)
+            if (s_MainTexId is 0)
             {
-                s_ColorMaskId = Shader.PropertyToID("_ColorMask");
                 s_MainTexId = Shader.PropertyToID("_MainTex");
                 s_SoftnessId = Shader.PropertyToID("_Softness");
                 s_Alpha = Shader.PropertyToID("_Alpha");
             }
 
             // Set material property.
-            _mpb ??= new MaterialPropertyBlock();
-            _mpb.SetTexture(s_MainTexId, graphic.mainTexture);
+            _mpb!.SetTexture(s_MainTexId, graphic.mainTexture);
             _mpb.SetFloat(s_SoftnessId, m_Softness);
             _mpb.SetFloat(s_Alpha, m_Alpha);
 
             // Draw mesh.
             var mat = GetSharedMaskMaterial();
-            _cb.DrawMesh(graphicMesh, transform.localToWorldMatrix, mat, 0, 0, _mpb);
+            _cb.DrawMesh(_graphicMesh, transform.localToWorldMatrix, mat, 0, 0, _mpb);
 
             Profiler.EndSample();
 

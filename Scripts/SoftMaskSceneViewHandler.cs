@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Profiling;
+using UnityEngine.UI;
 
 namespace Coffee.UISoftMask
 {
@@ -55,9 +56,10 @@ namespace Coffee.UISoftMask
 
             foreach (var maskable in _maskables)
             {
-                var mat = maskable.modifiedMaterial; // exists most cases.
-                var cam = maskable.graphic.canvas.worldCamera;
-                if (mat) SetUpGameVP(mat!, cam);
+                Assert.IsTrue(maskable, "SoftMaskable is null.");
+                var mat = maskable.modifiedMaterial;
+                var cam = CanvasUtils.ResolveWorldCamera(maskable.graphic)!;
+                if (mat) SetUpGameVP(mat!, cam); // exists most cases.
             }
         }
     }
