@@ -40,11 +40,17 @@ namespace Coffee.UISoftMask
             // If this component is disabled, the material is returned as is.
             // If the parents do not have a soft mask component, the material is returned as is.
             if (!isActiveAndEnabled)
+            {
+                L.W("[SoftMaskable] is not active. Returning base material: " + this, this);
                 return baseMaterial;
+            }
 
             var softMask = transform.NearestUpwards_GOActiveAndCompEnabled<SoftMask>();
             if (!softMask)
+            {
+                L.W("[SoftMaskable] No SoftMask component found in the parent hierarchy. Returning base material: " + this, this);
                 return baseMaterial;
+            }
 
             // Generate soft maskable material.
             var maskRt = softMask!.PopulateMaskRt();
