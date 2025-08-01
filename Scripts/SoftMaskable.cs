@@ -48,7 +48,7 @@ namespace Coffee.UISoftMask
             var softMask = transform.NearestUpwards_GOActiveAndCompEnabled<SoftMask>();
             if (!softMask)
             {
-                L.W("[SoftMaskable] No SoftMask component found in the parent hierarchy. Returning base material: " + this, this);
+                L.I("[SoftMaskable] No SoftMask component found in the parent hierarchy. Returning base material: " + this, this);
                 return baseMaterial;
             }
 
