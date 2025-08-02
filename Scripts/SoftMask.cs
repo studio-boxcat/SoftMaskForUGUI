@@ -304,7 +304,7 @@ namespace Coffee.UISoftMask
                 var renderMode = graphic.canvas.renderMode;
                 // XXX: unity internally returns RenderMode.ScreenSpaceOverlay when there's no camera set.
                 // most prefabs have no camera set, so we need to check the property directly.
-                if (renderMode is not RenderMode.ScreenSpaceOverlay)
+                if (renderMode is RenderMode.ScreenSpaceOverlay)
                     renderMode = (RenderMode) new UnityEditor.SerializedObject(graphic.canvas).FindProperty("m_RenderMode").intValue;
 
                 if (renderMode is not RenderMode.ScreenSpaceCamera)
