@@ -320,8 +320,12 @@ namespace Coffee.UISoftMask
 
                 if (g.HasComponent<SoftMask>())
                     result.AddError($"Nested SoftMask found in {g.name}.");
+
+                // commented out to prevent false alarms.
+                /*
                 if (g is not NonDrawingGraphic && g.NoComponent<SoftMaskable>())
                     result.AddError($"SoftMaskable component is missing in {g.name}.");
+                */
             }
         }
 #endif
