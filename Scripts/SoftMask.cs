@@ -299,7 +299,7 @@ namespace Coffee.UISoftMask
         void ISelfValidator.Validate(SelfValidationResult result)
         {
             if (graphic && graphic.canvas && graphic.canvas.renderMode is not RenderMode.ScreenSpaceCamera)
-                result.AddError("SoftMask only works with ScreenSpaceCamera render mode.");
+                result.AddError("SoftMask only works with ScreenSpaceCamera render mode: " + graphic.canvas.renderMode);
 
             var graphics = this.GetGraphicsInChildrenShared();
             foreach (var g in graphics)
