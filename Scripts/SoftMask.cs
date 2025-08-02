@@ -298,8 +298,18 @@ namespace Coffee.UISoftMask
 #if UNITY_EDITOR
         void ISelfValidator.Validate(SelfValidationResult result)
         {
-            if (graphic && graphic.canvas && graphic.canvas.renderMode is not RenderMode.ScreenSpaceCamera)
-                result.AddError("SoftMask only works with ScreenSpaceCamera render mode: " + graphic.canvas.renderMode);
+            // get original serialized property "m_RenderMode"
+            if (graphic && graphic.canvas)
+            {
+                var renderMode = graphic.canvas.renderMode;
+                // XXX: unity internally returns RenderMode.ScreenSpaceOverlay when there's no camera set.
+                // most prefabs have no camera set, so we need to check the property directly.
+                if (renderMode is not RenderMode.ScreenSpaceOverlay)
+                    renderMode = (RenderMode) new UnityEditor.SerializedObject(graphic.canvas).FindProperty("m_RenderMode").intValue;
+
+                if (renderMode is not RenderMode.ScreenSpaceCamera)
+                    result.AddError("SoftMask only works with ScreenSpaceCamera render mode: " + renderMode);
+            }
 
             var graphics = this.GetGraphicsInChildrenShared();
             foreach (var g in graphics)
