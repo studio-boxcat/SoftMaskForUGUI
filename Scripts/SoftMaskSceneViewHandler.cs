@@ -37,7 +37,7 @@ namespace Coffee.UISoftMask
         public static void SetUpGameVP(Material mat, Camera cam)
         {
             Assert.IsTrue(cam, "Camera is null.");
-            Assert.IsTrue(mat.shader.name.EndsWithOrdinal("(SoftMaskable)"), "Material shader is not SoftMaskable.");
+            Assert.IsTrue(mat.shader.name == "Hidden/SoftMaskable", "Material shader is not SoftMaskable.");
 
             mat.EnableKeyword("SOFTMASK_EDITOR");
 

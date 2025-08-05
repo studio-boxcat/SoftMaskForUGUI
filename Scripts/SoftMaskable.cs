@@ -31,9 +31,8 @@ namespace Coffee.UISoftMask
         [NonSerialized] private Graphic? _graphic;
         public Graphic graphic => _graphic ??= GetComponent<Graphic>();
 
-        private MaterialLink _materialLink;
-        [ShowInInspector]
-        public Material? modifiedMaterial => _materialLink.Get();
+        private MaterialLink? _materialLink;
+        public Material? modifiedMaterial => _materialLink?.Material;
 
         Material IMaterialModifier.GetModifiedMaterial(Material baseMaterial)
         {
@@ -52,19 +51,23 @@ namespace Coffee.UISoftMask
                 return baseMaterial;
             }
 
+            if (_materialLink is not null && _materialLink.Material)
+            {
+                L.W("[SoftMaskable] Rented material is destroyed, this happens when the Undo operation is performed.", this);
+                _materialLink = null;
+            }
+
             // Generate soft maskable material.
             var maskRt = softMask!.PopulateMaskRt();
-            MaterialCache.Register(
-                ref _materialLink, baseMaterial, m_MaskInteraction, maskRt);
+            MaterialCache.Rent(ref _materialLink, baseMaterial, m_MaskInteraction, maskRt);
 
-            var mat = _materialLink.Get()!;
-
+            var mat = _materialLink!.Material;
 #if DEBUG
             // XXX: material properties will be cleared after the scene or prefab is saved.
-            if (MaterialCache.IsMaterialConfigured(mat) is false)
+            if (_materialLink.IsMaterialConfigured() is false)
             {
                 if (Editing.No(this)) L.E("[SoftMaskable] Material properties were cleared. Reconfiguring material: " + this, this);
-                MaterialCache.ConfigureMaterial(mat, m_MaskInteraction, maskRt);
+                _materialLink.ConfigureMaterial();
                 SoftMaskSceneViewHandler.SetUpGameVP(mat, graphic.canvas.worldCamera);
             }
 #endif
@@ -105,7 +108,7 @@ namespace Coffee.UISoftMask
 
             SetMaterialDirty();
 
-            _materialLink.Release();
+            _materialLink?.Release();
         }
 
         private void SetMaterialDirty() => graphic.SetMaterialDirty();
