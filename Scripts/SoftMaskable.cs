@@ -51,12 +51,6 @@ namespace Coffee.UISoftMask
                 return baseMaterial;
             }
 
-            if (_materialLink is not null && _materialLink.Material)
-            {
-                L.W("[SoftMaskable] Rented material is destroyed, this happens when the Undo operation is performed.", this);
-                _materialLink = null;
-            }
-
             // Generate soft maskable material.
             var maskRt = softMask!.PopulateMaskRt();
             MaterialCache.Rent(ref _materialLink, baseMaterial, m_MaskInteraction, maskRt);
@@ -108,7 +102,11 @@ namespace Coffee.UISoftMask
 
             SetMaterialDirty();
 
-            _materialLink?.Release();
+            if (_materialLink is not null)
+            {
+                _materialLink.Release();
+                _materialLink = null;
+            }
         }
 
         private void SetMaterialDirty() => graphic.SetMaterialDirty();
