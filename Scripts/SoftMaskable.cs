@@ -121,15 +121,8 @@ namespace Coffee.UISoftMask
                 return;
             }
 
-            var shader = g.material.shader;
-            try
-            {
-                MaterialCache.ResolveShaderIndex(shader.name);
-            }
-            catch (Exception e)
-            {
-                result.AddError(e.Message);
-            }
+            if (MaterialCache.TryResolveShaderIndex(g.material.shader.name, out _) is false)
+                result.AddError($"Shader '{g.material.shader.name}' is not supported by SoftMaskable.");
 
             if (m_MaskInteraction is not (MaskInteraction.VisibleInside or MaskInteraction.VisibleOutside))
                 result.AddError($"Invalid mask interaction value: {m_MaskInteraction}.");

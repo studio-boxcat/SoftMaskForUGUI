@@ -92,15 +92,25 @@ namespace Coffee.UISoftMask
     {
         private static readonly Dictionary<ulong, MaterialLink> _cache = new();
 
-        internal static byte ResolveShaderIndex(string shaderName)
+        internal static bool TryResolveShaderIndex(string shaderName, out byte shaderIndex)
         {
-            return shaderName switch
+            shaderIndex = shaderName switch
             {
                 "UI/Default" => 0,
                 "MeowTower/UI/UI-Additive" => 1,
                 "MeowTower/UI/UI-PremultAlpha" => 2,
-                _ => throw new Exception($"Shader {shaderName} not supported.")
+                _ => byte.MaxValue, // Not supported
             };
+
+            return shaderIndex is not byte.MaxValue;
+        }
+
+        private static byte ResolveShaderIndex(string shaderName)
+        {
+            if (TryResolveShaderIndex(shaderName, out var shaderIndex))
+                return shaderIndex;
+            L.E($"[SoftMask.MaterialCache] Shader '{shaderName}' is not supported. Using default shader index 0.");
+            return 0; // Fallback to default shader index.
         }
 
         private static ulong Hash(Material orgMat, MaskInteraction maskInteraction, RenderTexture maskRt, out byte shaderIndex)
