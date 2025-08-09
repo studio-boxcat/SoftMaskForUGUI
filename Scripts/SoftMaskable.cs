@@ -62,7 +62,7 @@ namespace Coffee.UISoftMask
             {
                 if (Editing.No(this)) L.E("[SoftMaskable] Material properties were cleared. Reconfiguring material: " + this, this);
                 _materialLink.ConfigureMaterial();
-                SoftMaskSceneViewHandler.SetUpGameVP(mat, graphic.canvas.worldCamera);
+                SoftMaskSceneViewHandler.SetUpGameVP(mat, graphic);
             }
 #endif
 

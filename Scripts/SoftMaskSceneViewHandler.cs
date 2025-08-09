@@ -34,9 +34,15 @@ namespace Coffee.UISoftMask
                 SceneView.beforeSceneGui -= UpdateMaskables;
         }
 
-        public static void SetUpGameVP(Material mat, Camera cam)
+        public static void SetUpGameVP(Material mat, Graphic graphic)
         {
-            Assert.IsTrue(cam, "Camera is null.");
+            var cam = CanvasUtils.ResolveWorldCamera(graphic);
+            if (!cam)
+            {
+                L.E("[SoftMaskable] No camera found for Graphic: " + graphic, graphic);
+                return;
+            }
+
             Assert.IsTrue(mat.shader.name == "Hidden/SoftMaskable", "Material shader is not SoftMaskable.");
 
             mat.EnableKeyword("SOFTMASK_EDITOR");
@@ -58,8 +64,7 @@ namespace Coffee.UISoftMask
             {
                 Assert.IsTrue(maskable, "SoftMaskable is null.");
                 var mat = maskable.modifiedMaterial;
-                var cam = CanvasUtils.ResolveWorldCamera(maskable.graphic)!;
-                if (mat) SetUpGameVP(mat!, cam); // exists most cases.
+                if (mat) SetUpGameVP(mat!, maskable.graphic); // exists most cases.
             }
         }
     }
