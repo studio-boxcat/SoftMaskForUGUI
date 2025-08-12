@@ -56,7 +56,7 @@ namespace Coffee.UISoftMask
             MaterialCache.Rent(ref _materialLink, baseMaterial, m_MaskInteraction, maskRt);
 
             var mat = _materialLink!.Material;
-#if DEBUG
+#if UNITY_EDITOR
             // XXX: material properties will be cleared after the scene or prefab is saved.
             if (_materialLink.IsMaterialConfigured() is false)
             {
