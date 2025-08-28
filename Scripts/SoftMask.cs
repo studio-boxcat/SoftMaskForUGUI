@@ -5,6 +5,7 @@
 using System;
 using Sirenix.OdinInspector;
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 using UnityEngine.Serialization;
@@ -30,12 +31,12 @@ namespace Coffee.UISoftMask
 
         private enum DownSamplingRate { None = 0, x1 = 1, x2 = 2, x4 = 4, x8 = 8, }
 
-        [SerializeField, OnValueChanged("SetMaskRtDirty")]
+        [SerializeField, OnValueChanged("QueueRenderMaskRt")]
         private DownSamplingRate m_DownSamplingRate = DownSamplingRate.x4;
-        [SerializeField, Range(0, 1), OnValueChanged("SetMaskRtDirty")]
+        [SerializeField, Range(0, 1), OnValueChanged("QueueRenderMaskRt")]
         private float m_Softness = 1;
 
-        [SerializeField, Range(0f, 1f), OnValueChanged("SetMaskRtDirty")]
+        [SerializeField, Range(0f, 1f), OnValueChanged("QueueRenderMaskRt")]
         private float m_Alpha = 1;
         public float alpha
         {
@@ -45,7 +46,7 @@ namespace Coffee.UISoftMask
                 value = Mathf.Clamp01(value);
                 if (Mathf.Approximately(m_Alpha, value)) return;
                 m_Alpha = value;
-                SetMaskRtDirty();
+                QueueRenderMaskRt();
             }
         }
 
@@ -60,7 +61,7 @@ namespace Coffee.UISoftMask
         /// </summary>
         public void OnEnable()
         {
-            SetMaskRtDirty();
+            QueueRenderMaskRt();
 
             _graphic.SetMaterialDirty();
 
@@ -98,20 +99,19 @@ namespace Coffee.UISoftMask
         private void LateUpdate()
         {
             if (transform.UnsetHasChanged())
-                SetMaskRtDirty();
+                QueueRenderMaskRt();
         }
 
         private void OnTransformParentChanged()
         {
             if (isActiveAndEnabled)
-                SetMaskRtDirty();
+                QueueRenderMaskRt();
         }
-
-        private void SetMaskRtDirty() =>
-            CanvasUpdateRegistry.QueueGraphicRebuildCallback(this);
 
         internal RenderTexture PopulateMaskRt()
         {
+            Assert.IsTrue(enabled, $"[SoftMask] SoftMask is disabled: {name}");
+
             // Check the size of soft mask buffer.
             GetDownSamplingSize(m_DownSamplingRate, out var w, out var h);
 
@@ -131,18 +131,20 @@ namespace Coffee.UISoftMask
                 _maskRt = RenderTexture.GetTemporary(w, h, depthBuffer: 0, RenderTextureFormat.R8);
             }
 
-            SetMaskRtDirty();
             return _maskRt;
         }
 
         void IMeshModifier.ModifyMesh(MeshBuilder mb) =>
-            SetMaskRtDirty();
+            QueueRenderMaskRt();
 
         Material IMaterialModifier.GetModifiedMaterial(Material baseMaterial)
         {
-            SetMaskRtDirty();
+            QueueRenderMaskRt();
             return baseMaterial;
         }
+
+        private void QueueRenderMaskRt() =>
+            CanvasUpdateRegistry.QueueGraphicRebuildCallback(this);
 
         void IPostGraphicRebuildCallback.PostGraphicRebuild()
         {

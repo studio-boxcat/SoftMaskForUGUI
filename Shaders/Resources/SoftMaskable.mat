@@ -29,7 +29,6 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _ColorMask: 15
     - _DstBlend: 10
     - _SrcBlend: 5
     m_Colors:
