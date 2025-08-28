@@ -3,11 +3,11 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Coffee.UISoftMask
@@ -16,47 +16,24 @@ namespace Coffee.UISoftMask
     /// Soft mask.
     /// Use instead of Mask for smooth masking.
     /// </summary>
-    public sealed class SoftMask : Mask, IMeshModifier
+    public sealed class SoftMask : MonoBehaviour, IMeshModifier, IMaterialModifier, IPostGraphicRebuildCallback
 #if UNITY_EDITOR
         , ISelfValidator
 #endif
     {
-        /// <summary>
-        /// Down sampling rate.
-        /// </summary>
-        public enum DownSamplingRate { None = 0, x1 = 1, x2 = 2, x4 = 4, x8 = 8, }
+        [SerializeField, Required, ChildGameObjectsOnly]
+        private Graphic _graphic = null!;
+        [SerializeField, Required, ChildGameObjectsOnly]
+        private SoftMaskable[] _maskables = null!;
+        [SerializeField, FormerlySerializedAs("m_ShowMaskGraphic")]
+        private bool _showMaskGraphic = true;
 
-        private static readonly List<SoftMask> s_ActiveSoftMasks = new List<SoftMask>();
-        private static int s_MainTexId;
-        private static int s_SoftnessId;
-        private static int s_Alpha;
+        private enum DownSamplingRate { None = 0, x1 = 1, x2 = 2, x4 = 4, x8 = 8, }
 
         [SerializeField, OnValueChanged("SetMaskRtDirty")]
         private DownSamplingRate m_DownSamplingRate = DownSamplingRate.x4;
-        public DownSamplingRate downSamplingRate
-        {
-            get => m_DownSamplingRate;
-            set
-            {
-                if (m_DownSamplingRate == value) return;
-                m_DownSamplingRate = value;
-                SetMaskRtDirty();
-            }
-        }
-
         [SerializeField, Range(0, 1), OnValueChanged("SetMaskRtDirty")]
         private float m_Softness = 1;
-        public float softness
-        {
-            get => m_Softness;
-            set
-            {
-                value = Mathf.Clamp01(value);
-                if (Mathf.Approximately(m_Softness, value)) return;
-                m_Softness = value;
-                SetMaskRtDirty();
-            }
-        }
 
         [SerializeField, Range(0f, 1f), OnValueChanged("SetMaskRtDirty")]
         private float m_Alpha = 1;
@@ -73,64 +50,37 @@ namespace Coffee.UISoftMask
         }
 
         [NonSerialized, ShowInInspector, ReadOnly, PreviewField, HorizontalGroup("Preview"), HideLabel]
-        private Mesh? _graphicMesh; // hook graphic mesh into SoftMask.
-        [NonSerialized, ShowInInspector, ReadOnly, PreviewField, HorizontalGroup("Preview"), HideLabel]
         private RenderTexture? _maskRt;
         private MaterialPropertyBlock? _mpb;
         private CommandBuffer? _cb;
 
 
-        public override Material GetModifiedMaterial(Material baseMaterial)
-        {
-            SetMaskRtDirty();
-            return base.GetModifiedMaterial(baseMaterial);
-        }
-
-        void IMeshModifier.ModifyMesh(MeshBuilder mb)
-        {
-            _graphicMesh ??= MeshPool.CreateDynamicMesh();
-            _graphicMesh.Clear();
-            mb.FillMesh(_graphicMesh);
-            SetMaskRtDirty();
-        }
-
         /// <summary>
         /// This function is called when the object becomes enabled and active.
         /// </summary>
-        protected override void OnEnable()
+        public void OnEnable()
         {
             SetMaskRtDirty();
 
-            // Register.
-            if (s_ActiveSoftMasks.IsEmpty())
-                Canvas.willRenderCanvases += UpdateMaskTextures;
-            s_ActiveSoftMasks.Add(this);
+            _graphic.SetMaterialDirty();
 
-            graphic.SetVerticesDirty();
-
-            base.OnEnable();
-
-            SetAllMaskablesDirty(this);
+            foreach (var m in _maskables)
+            {
+                if (m) m.graphic.SetMaterialDirty();
+                else L.W($"[SoftMask] Maskable is destroyed: {m.SafeName()}");
+            }
         }
 
         /// <summary>
         /// This function is called when the behaviour becomes disabled.
         /// </summary>
-        protected override void OnDisable()
+        private void OnDisable()
         {
-            // Unregister.
-            s_ActiveSoftMasks.Remove(this);
-            if (s_ActiveSoftMasks.IsEmpty())
-                Canvas.willRenderCanvases -= UpdateMaskTextures;
-
             // Destroy objects.
             _mpb?.Clear();
             _mpb = null;
             _cb?.Release();
             _cb = null;
-
-            DestroyImmediate(_graphicMesh);
-            _graphicMesh = null;
 
             if (_maskRt)
             {
@@ -138,9 +88,17 @@ namespace Coffee.UISoftMask
                 _maskRt = null;
             }
 
-            base.OnDisable();
+            foreach (var m in _maskables)
+            {
+                if (m) m.graphic.SetMaterialDirty();
+                else L.W($"[SoftMask] Maskable is destroyed: {m.SafeName()}");
+            }
+        }
 
-            SetAllMaskablesDirty(this);
+        private void LateUpdate()
+        {
+            if (transform.UnsetHasChanged())
+                SetMaskRtDirty();
         }
 
         private void OnTransformParentChanged()
@@ -149,9 +107,8 @@ namespace Coffee.UISoftMask
                 SetMaskRtDirty();
         }
 
-        private bool _markRtDirty;
-
-        private void SetMaskRtDirty() => _markRtDirty = true;
+        private void SetMaskRtDirty() =>
+            CanvasUpdateRegistry.QueueGraphicRebuildCallback(this);
 
         internal RenderTexture PopulateMaskRt()
         {
@@ -178,34 +135,20 @@ namespace Coffee.UISoftMask
             return _maskRt;
         }
 
-        /// <summary>
-        /// Update all soft mask textures.
-        /// </summary>
-        private static void UpdateMaskTextures()
+        void IMeshModifier.ModifyMesh(MeshBuilder mb) =>
+            SetMaskRtDirty();
+
+        Material IMaterialModifier.GetModifiedMaterial(Material baseMaterial)
         {
-            foreach (var sm in s_ActiveSoftMasks)
-            {
-                if (sm.transform.UnsetHasChanged())
-                    sm._markRtDirty = true;
-                if (sm._markRtDirty)
-                    sm.UpdateMaskRt();
-            }
+            SetMaskRtDirty();
+            return baseMaterial;
         }
 
-        /// <summary>
-        /// Update the mask texture.
-        /// </summary>
-        private void UpdateMaskRt()
+        void IPostGraphicRebuildCallback.PostGraphicRebuild()
         {
             // L.I("[SoftMask] Updating mask buffer: " + this, this);
 
-            if (_graphicMesh is null)
-            {
-                L.W("[SoftMask] No graphic mesh found. Skipping mask update.");
-                return;
-            }
-
-            var cam = CanvasUtils.ResolveWorldCamera(graphic);
+            var cam = CanvasUtils.ResolveWorldCamera(_graphic);
             if (!cam)
             {
                 L.W("[SoftMask] No camera found: " + name);
@@ -214,70 +157,53 @@ namespace Coffee.UISoftMask
 
             Profiler.BeginSample("UpdateMaskRt");
 
-            _markRtDirty = false;
-
             if (_cb is null)
             {
                 _cb = new CommandBuffer();
                 _mpb = new MaterialPropertyBlock();
             }
 
-            // CommandBuffer.
-            Profiler.BeginSample("Initialize CommandBuffer");
+            // arrange command buffer
             _cb.Clear();
             _cb.SetRenderTarget(PopulateMaskRt());
             _cb.ClearRenderTarget(false, true, backgroundColor: default);
-            Profiler.EndSample();
-
-            // Set view and projection matrices.
-            Profiler.BeginSample("Set view and projection matrices");
-            _cb.SetViewProjectionMatrices(cam.worldToCameraMatrix,
+            _cb.SetViewProjectionMatrices(cam!.worldToCameraMatrix,
                 GL.GetGPUProjectionMatrix(cam.projectionMatrix, renderIntoTexture: false));
-            Profiler.EndSample();
 
-            // Draw soft masks.
-            Profiler.BeginSample("Draw Mesh");
-
-            if (s_MainTexId is 0)
-            {
-                s_MainTexId = Shader.PropertyToID("_MainTex");
-                s_SoftnessId = Shader.PropertyToID("_Softness");
-                s_Alpha = Shader.PropertyToID("_Alpha");
-            }
-
-            // Set material property.
-            _mpb!.SetTexture(s_MainTexId, graphic.mainTexture);
+            // set material property
+            _mpb!.SetTexture(s_MainTexId, _graphic.mainTexture);
             _mpb.SetFloat(s_SoftnessId, m_Softness);
             _mpb.SetFloat(s_Alpha, m_Alpha);
 
-            // Draw mesh.
+            // draw mesh & execute command buffer
             var mat = GetSharedMaskMaterial();
-            _cb.DrawMesh(_graphicMesh, transform.localToWorldMatrix, mat, 0, 0, _mpb);
-
-            Profiler.EndSample();
-
+            _cb.DrawMesh(_graphic.canvasRenderer.GetMesh(),
+                transform.localToWorldMatrix, mat, 0, 0, _mpb);
             Graphics.ExecuteCommandBuffer(_cb);
-            Profiler.EndSample();
+
+            Profiler.EndSample(); // UpdateMaskRt
         }
 
-        [NonSerialized] private static Material? _maskMat;
-        private static Material GetSharedMaskMaterial() => _maskMat ??= Resources.Load<Material>("SoftMask");
+        private static readonly int s_MainTexId;
+        private static readonly int s_SoftnessId;
+        private static readonly int s_Alpha;
 
-        private static readonly List<SoftMaskable> _maskables = new();
-        private static void SetAllMaskablesDirty(SoftMask sm)
+        static SoftMask()
         {
-            sm.GetComponentsInChildren(includeInactive: false, _maskables); // no need to clear
-            foreach (var maskable in _maskables)
-                maskable.graphic.SetMaterialDirty();
+            s_MainTexId = Shader.PropertyToID("_MainTex");
+            s_SoftnessId = Shader.PropertyToID("_Softness");
+            s_Alpha = Shader.PropertyToID("_Alpha");
         }
+
+        private static Material? _sharedMaskMat;
+        private static Material GetSharedMaskMaterial() => _sharedMaskMat ??= Resources.Load<Material>("SoftMask");
 
         /// <summary>
         /// Gets the size of the down sampling.
         /// </summary>
         private static void GetDownSamplingSize(DownSamplingRate rate, out int w, out int h)
         {
-            w = Screen.currentResolution.width;
-            h = Screen.currentResolution.height;
+            (w, h) = Screen.currentResolution;
 
             if (rate == DownSamplingRate.None)
                 return;
@@ -299,6 +225,7 @@ namespace Coffee.UISoftMask
         void ISelfValidator.Validate(SelfValidationResult result)
         {
             // get original serialized property "m_RenderMode"
+            var graphic = _graphic;
             if (graphic && graphic.canvas)
             {
                 var renderMode = graphic.canvas.renderMode;

@@ -7,7 +7,6 @@ Shader "Hidden/SoftMaskable"
 
         [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend ("Src Blend", Int) = 5 // SrcAlpha
         [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend ("Dst Blend", Int) = 10 // OneMinusSrcAlpha
-        _ColorMask ("Color Mask", Float) = 15
     }
 
     SubShader
@@ -26,7 +25,6 @@ Shader "Hidden/SoftMaskable"
         ZWrite Off
         ZTest [unity_GUIZTestMode]
         Blend [_SrcBlend] [_DstBlend]
-        ColorMask [_ColorMask]
 
         Pass
         {

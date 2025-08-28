@@ -127,17 +127,14 @@ namespace Coffee.UISoftMask
             if (m_MaskInteraction is not (MaskInteraction.VisibleInside or MaskInteraction.VisibleOutside))
                 result.AddError($"Invalid mask interaction value: {m_MaskInteraction}.");
 
-            if (g is MaskableGraphic { maskable: true })
-                result.AddError("MaskableGraphic is enabled. SoftMaskable should be used with non-maskable graphics to avoid conflicts.");
-
             if (this.HasComponentInParent<SoftMask>(includeInactive: true) is false)
                 result.AddError("SoftMaskable must be a child of SoftMask component to work properly.");
 
             if (ComponentSearch.AnyComponentExcept<IMaterialModifier>(this,
-                    except1: typeof(MaskableGraphic), except2: typeof(SoftMaskable)))
+                    except1: typeof(Graphic), except2: typeof(SoftMaskable)))
             {
                 result.AddError("SoftMaskable should not be used with other IMaterialModifier components " +
-                                "except MaskableGraphic or SoftMaskable itself. " +
+                                "except Graphic or SoftMaskable itself. " +
                                 "This may cause unexpected behavior.");
             }
         }
