@@ -52,8 +52,9 @@ namespace Coffee.UISoftMask
             }
         }
 
-        [NonSerialized, ShowInInspector, ReadOnly, PreviewField, HorizontalGroup("Preview"), HideLabel]
-        [PropertyOrder(2000)]
+        [NonSerialized, ShowInInspector, ReadOnly, PreviewField, HorizontalGroup("Preview"), PropertyOrder(2000), HideLabel]
+        private Mesh? _graphicMesh;
+        [NonSerialized, ShowInInspector, ReadOnly, PreviewField, HorizontalGroup("Preview"), PropertyOrder(2000), HideLabel]
         private RenderTexture? _maskRt;
         private MaterialPropertyBlock? _mpb;
         private CommandBuffer? _cb;
@@ -85,6 +86,12 @@ namespace Coffee.UISoftMask
             _mpb = null;
             _cb?.Release();
             _cb = null;
+
+            if (_graphicMesh is not null)
+            {
+                DestroyImmediate(_graphicMesh);
+                _graphicMesh = null;
+            }
 
             if (_maskRt)
             {
@@ -171,13 +178,18 @@ namespace Coffee.UISoftMask
             _cb.SetViewProjectionMatrices(cam!.worldToCameraMatrix,
                 GL.GetGPUProjectionMatrix(cam.projectionMatrix, renderIntoTexture: false));
 
+            // prepare mesh. somehow providing GetMesh() directly to DrawMesh() causes the following error.
+            // Missing vertex input: vertex, dummy data will be provided
+            _graphicMesh ??= MeshPool.CreateDynamicMesh("SoftMask_GeneratedMesh");
+            _graphicMesh.CombineMeshes(cr.GetMesh());
+
             // set material property
             _mpb!.SetTexture(s_MainTexId, _graphic.mainTexture);
             _mpb.SetFloat(s_SoftnessId, m_Softness);
             _mpb.SetFloat(s_Alpha, m_Alpha);
 
             // draw mesh & execute command buffer
-            _cb.DrawMesh(cr.GetMesh(), transform.localToWorldMatrix, GetSharedMaskMaterial(), 0, 0, _mpb);
+            _cb.DrawMesh(_graphicMesh, transform.localToWorldMatrix, GetSharedMaskMaterial(), 0, 0, _mpb);
             Graphics.ExecuteCommandBuffer(_cb);
 
             Profiler.EndSample(); // UpdateMaskRt
