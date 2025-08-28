@@ -49,7 +49,7 @@ namespace Coffee.UISoftMask
 
             // Set view and projection matrices.
             Profiler.BeginSample("Set view and projection matrices");
-            var p = GL.GetGPUProjectionMatrix(cam.projectionMatrix, false);
+            var p = GL.GetGPUProjectionMatrix(cam!.projectionMatrix, false);
             var pv = p * cam.worldToCameraMatrix;
             mat.SetMatrix(_gameVPId, pv);
             mat.SetMatrix(_gameTVPId, pv);

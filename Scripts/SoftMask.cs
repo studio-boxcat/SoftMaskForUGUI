@@ -17,17 +17,19 @@ namespace Coffee.UISoftMask
     /// Soft mask.
     /// Use instead of Mask for smooth masking.
     /// </summary>
+    [ExecuteAlways]
     public sealed class SoftMask : MonoBehaviour, IMeshModifier, IMaterialModifier, IPostGraphicRebuildCallback
 #if UNITY_EDITOR
         , ISelfValidator
 #endif
     {
-        [SerializeField, Required, ChildGameObjectsOnly]
+        [SerializeField, Required, ChildGameObjectsOnly, HideIf("_graphic_HideIf")]
         private Graphic _graphic = null!;
-        [SerializeField, Required, ChildGameObjectsOnly]
-        private SoftMaskable[] _maskables = null!;
         [SerializeField, FormerlySerializedAs("m_ShowMaskGraphic")]
         private bool _showMaskGraphic = true;
+        [SerializeField, Required, ChildGameObjectsOnly, PropertyOrder(1000)]
+        [ListDrawerSettings(IsReadOnly = true)]
+        private SoftMaskable[] _maskables = null!;
 
         private enum DownSamplingRate { None = 0, x1 = 1, x2 = 2, x4 = 4, x8 = 8, }
 
@@ -51,6 +53,7 @@ namespace Coffee.UISoftMask
         }
 
         [NonSerialized, ShowInInspector, ReadOnly, PreviewField, HorizontalGroup("Preview"), HideLabel]
+        [PropertyOrder(2000)]
         private RenderTexture? _maskRt;
         private MaterialPropertyBlock? _mpb;
         private CommandBuffer? _cb;
@@ -102,12 +105,6 @@ namespace Coffee.UISoftMask
                 QueueRenderMaskRt();
         }
 
-        private void OnTransformParentChanged()
-        {
-            if (isActiveAndEnabled)
-                QueueRenderMaskRt();
-        }
-
         internal RenderTexture PopulateMaskRt()
         {
             Assert.IsTrue(enabled, $"[SoftMask] SoftMask is disabled: {name}");
@@ -134,8 +131,7 @@ namespace Coffee.UISoftMask
             return _maskRt;
         }
 
-        void IMeshModifier.ModifyMesh(MeshBuilder mb) =>
-            QueueRenderMaskRt();
+        void IMeshModifier.ModifyMesh(MeshBuilder mb) => QueueRenderMaskRt();
 
         Material IMaterialModifier.GetModifiedMaterial(Material baseMaterial)
         {
@@ -149,6 +145,9 @@ namespace Coffee.UISoftMask
         void IPostGraphicRebuildCallback.PostGraphicRebuild()
         {
             // L.I("[SoftMask] Updating mask buffer: " + this, this);
+
+            var cr = _graphic.canvasRenderer;
+            cr.materialCount = _showMaskGraphic ? 1 : 0;
 
             var cam = CanvasUtils.ResolveWorldCamera(_graphic);
             if (!cam)
@@ -178,9 +177,7 @@ namespace Coffee.UISoftMask
             _mpb.SetFloat(s_Alpha, m_Alpha);
 
             // draw mesh & execute command buffer
-            var mat = GetSharedMaskMaterial();
-            _cb.DrawMesh(_graphic.canvasRenderer.GetMesh(),
-                transform.localToWorldMatrix, mat, 0, 0, _mpb);
+            _cb.DrawMesh(cr.GetMesh(), transform.localToWorldMatrix, GetSharedMaskMaterial(), 0, 0, _mpb);
             Graphics.ExecuteCommandBuffer(_cb);
 
             Profiler.EndSample(); // UpdateMaskRt
@@ -224,6 +221,23 @@ namespace Coffee.UISoftMask
         }
 
 #if UNITY_EDITOR
+        private void Reset()
+        {
+            _graphic = GetComponent<Graphic>();
+            _maskables = GetComponentsInChildren<SoftMaskable>(includeInactive: true);
+        }
+
+        private void OnValidate()
+        {
+            if (!_graphic)
+                _graphic = GetComponent<Graphic>();
+            if (_maskables is null || _maskables.Length == 0)
+                _maskables = GetComponentsInChildren<SoftMaskable>(includeInactive: true);
+        }
+
+        private bool _graphic_HideIf() =>
+            _graphic && _graphic.gameObject.RefEq(gameObject);
+
         void ISelfValidator.Validate(SelfValidationResult result)
         {
             // get original serialized property "m_RenderMode"
