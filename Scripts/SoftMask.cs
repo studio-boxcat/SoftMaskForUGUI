@@ -8,7 +8,6 @@ using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Coffee.UISoftMask
@@ -25,7 +24,7 @@ namespace Coffee.UISoftMask
     {
         [SerializeField, Required, ChildGameObjectsOnly, HideIf("_graphic_HideIf")]
         private Graphic _graphic = null!;
-        [SerializeField, FormerlySerializedAs("m_ShowMaskGraphic")]
+        [SerializeField]
         private bool _showMaskGraphic = true;
         [SerializeField, Required, ChildGameObjectsOnly, PropertyOrder(1000)]
         [ListDrawerSettings(IsReadOnly = true)]
@@ -237,14 +236,6 @@ namespace Coffee.UISoftMask
         {
             _graphic = GetComponent<Graphic>();
             _maskables = GetComponentsInChildren<SoftMaskable>(includeInactive: true);
-        }
-
-        private void OnValidate()
-        {
-            if (!_graphic)
-                _graphic = GetComponent<Graphic>();
-            if (_maskables is null || _maskables.Length == 0)
-                _maskables = GetComponentsInChildren<SoftMaskable>(includeInactive: true);
         }
 
         private bool _graphic_HideIf() =>
