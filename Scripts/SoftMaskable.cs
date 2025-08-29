@@ -115,12 +115,6 @@ namespace Coffee.UISoftMask
         void ISelfValidator.Validate(SelfValidationResult result)
         {
             var g = GetComponent<Graphic>();
-            if (!g || !g.material || !g.material.shader)
-            {
-                result.AddError("Graphic component is missing or has no material/shader.");
-                return;
-            }
-
             if (MaterialCache.TryResolveShaderIndex(g.material.shader.name, out _) is false)
                 result.AddError($"Shader '{g.material.shader.name}' is not supported by SoftMaskable.");
 
@@ -134,8 +128,7 @@ namespace Coffee.UISoftMask
                     except1: typeof(Graphic), except2: typeof(SoftMaskable)))
             {
                 result.AddError("SoftMaskable should not be used with other IMaterialModifier components " +
-                                "except Graphic or SoftMaskable itself. " +
-                                "This may cause unexpected behavior.");
+                                "except Graphic or SoftMaskable itself. This may cause unexpected behavior.");
             }
         }
 #endif

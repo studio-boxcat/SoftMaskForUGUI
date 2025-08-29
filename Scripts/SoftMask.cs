@@ -27,7 +27,7 @@ namespace Coffee.UISoftMask
         [SerializeField]
         private bool _showMaskGraphic = true;
         [SerializeField, Required, ChildGameObjectsOnly, PropertyOrder(1000)]
-        [ListDrawerSettings(IsReadOnly = true)]
+        [ListDrawerSettings(IsReadOnly = true), AllChildren, RequiredListLength(MinLength = 1)]
         private SoftMaskable[] _maskables = null!;
 
         private enum DownSamplingRate { None = 0, x1 = 1, x2 = 2, x4 = 4, x8 = 8, }
@@ -275,12 +275,6 @@ namespace Coffee.UISoftMask
                     result.AddError($"SoftMaskable component is missing in {g.name}.");
                 */
             }
-
-            if (_maskables.IsEmpty())
-                result.AddError("SoftMaskable component not found in children.");
-
-            if (this.SequenceEqualsWithChildren(_maskables) is false)
-                result.AddError("Missing SoftMaskable component found in children.");
         }
 #endif
     }
