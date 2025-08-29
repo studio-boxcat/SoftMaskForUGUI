@@ -51,9 +51,11 @@ namespace Coffee.UISoftMask
             }
         }
 
-        [NonSerialized, ShowInInspector, ReadOnly, PreviewField, HorizontalGroup("Preview"), PropertyOrder(2000), HideLabel]
+        [NonSerialized, ShowInInspector, HideLabel, ReadOnly]
+        [PreviewField, HorizontalGroup("Preview", order: 2000, width: 50)]
         private Mesh? _graphicMesh;
-        [NonSerialized, ShowInInspector, ReadOnly, PreviewField, HorizontalGroup("Preview"), PropertyOrder(2000), HideLabel]
+        [NonSerialized, ShowInInspector, HideLabel, ReadOnly]
+        [PreviewField, HorizontalGroup("Preview", width: 50)]
         private RenderTexture? _maskRt;
         private MaterialPropertyBlock? _mpb;
         private CommandBuffer? _cb;
@@ -273,6 +275,12 @@ namespace Coffee.UISoftMask
                     result.AddError($"SoftMaskable component is missing in {g.name}.");
                 */
             }
+
+            if (_maskables.IsEmpty())
+                result.AddError("SoftMaskable component not found in children.");
+
+            if (this.SequenceEqualsWithChildren(_maskables) is false)
+                result.AddError("Missing SoftMaskable component found in children.");
         }
 #endif
     }
